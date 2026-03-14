@@ -1,0 +1,215 @@
+{
+  "mikado_graph": {
+    "version": "1.0",
+    "goal": "Utiliser Firebase comme persistance pour remplacer PostgreSQL",
+    "created_at": "2026-02-07T10:19:39.3312612+01:00",
+    "updated_at": "2026-02-11T12:51:57.436Z",
+    "nodes": {
+      "migration-firebase": {
+        "id": "migration-firebase",
+        "description": "Utiliser Firebase comme persistance pour remplacer PostgreSQL",
+        "status": "todo",
+        "depends_on": [
+          "archi-cible-validee",
+          "definir-mapping-entites-firestore",
+          "schema-firestore-et-indexes",
+          "table-liaison-useridentitymap",
+          "mode-read-legacy-write-dual",
+          "auth-coexistence-tokens",
+          "batch-initial-copie",
+          "dual-write-features-pilotes",
+          "jobs-reconciliation",
+          "bascule-lecture-par-feature",
+          "fallback-legacy-lecture",
+          "stabilisation-desactiver-legacy-writes",
+          "plan-migration-ecran-par-ecran",
+          "diagramme-identite-auth",
+          "strategie-observabilite-divergences",
+          "decision-matrix-ecrans"
+        ],
+        "notes": "Auth source of truth: ASP.NET Identity + JWT. Firebase Auth en parallele. Firestore cible pour donnees produit non relationnelles. Backend orchestre et expose API unique. Frontend consomme API unique.",
+        "created_at": "2026-02-07T10:19:39.3312612+01:00",
+        "updated_at": "2026-02-07T10:23:10.0000000+01:00"
+      },
+      "archi-cible-validee": {
+        "id": "archi-cible-validee",
+        "description": "Valider l’architecture cible et les principes (coexistence par feature, dual-write, API unique)",
+        "status": "done",
+        "depends_on": [],
+        "notes": "JWT Identity reste reference; Firebase Auth parallele; Frontend pas d’acces direct Firestore.",
+        "created_at": "2026-02-07T10:23:10.0000000+01:00",
+        "updated_at": "2026-02-07T13:15:22.208Z"
+      },
+      "definir-mapping-entites-firestore": {
+        "id": "definir-mapping-entites-firestore",
+        "description": "Definir le mapping des entites vers collections Firestore",
+        "status": "done",
+        "depends_on": [
+          "archi-cible-validee"
+        ],
+        "notes": "Preferences, plans, listes en priorite.",
+        "created_at": "2026-02-07T10:23:10.0000000+01:00",
+        "updated_at": "2026-02-07T13:46:52.424Z"
+      },
+      "schema-firestore-et-indexes": {
+        "id": "schema-firestore-et-indexes",
+        "description": "Produire le schema Firestore (collections + indexes)",
+        "status": "done",
+        "depends_on": [
+          "definir-mapping-entites-firestore"
+        ],
+        "notes": "Livrable attendu: schema Firestore + indexes.",
+        "created_at": "2026-02-07T10:23:10.0000000+01:00",
+        "updated_at": "2026-02-07T14:53:34.590+01:00"
+      },
+      "table-liaison-useridentitymap": {
+        "id": "table-liaison-useridentitymap",
+        "description": "Creer la table de liaison UserIdentityMap (AspNetUserId, FirebaseUid, createdAt)",
+        "status": "done",
+        "depends_on": [
+          "archi-cible-validee"
+        ],
+        "notes": "Id utilisateur unifie AspNetUserId <-> FirebaseUid.",
+        "created_at": "2026-02-07T10:23:10.0000000+01:00",
+        "updated_at": "2026-02-07T17:07:34.267Z"
+      },
+      "mode-read-legacy-write-dual": {
+        "id": "mode-read-legacy-write-dual",
+        "description": "Ajouter un mode Read Legacy / Write Dual dans le backend",
+        "status": "doing",
+        "depends_on": [
+          "archi-cible-validee"
+        ],
+        "notes": "Dual-write controle: ecriture DB actuelle + Firestore.",
+        "created_at": "2026-02-07T10:23:10.0000000+01:00",
+        "updated_at": "2026-02-11T12:51:57.436Z"
+      },
+      "auth-coexistence-tokens": {
+        "id": "auth-coexistence-tokens",
+        "description": "Backend accepte JWT interne + Firebase ID token, middleware unifie identite",
+        "status": "todo",
+        "depends_on": [
+          "table-liaison-useridentitymap"
+        ],
+        "notes": "Livrable attendu: diagramme d’identite et flux auth unifie.",
+        "created_at": "2026-02-07T10:23:10.0000000+01:00",
+        "updated_at": "2026-02-11T12:51:56.748Z"
+      },
+      "batch-initial-copie": {
+        "id": "batch-initial-copie",
+        "description": "Executer un batch initial de copie vers Firestore",
+        "status": "todo",
+        "depends_on": [
+          "schema-firestore-et-indexes",
+          "table-liaison-useridentitymap"
+        ],
+        "notes": "",
+        "created_at": "2026-02-07T10:23:10.0000000+01:00",
+        "updated_at": "2026-02-11T12:51:42.788Z"
+      },
+      "dual-write-features-pilotes": {
+        "id": "dual-write-features-pilotes",
+        "description": "Activer dual-write pour features pilotes",
+        "status": "todo",
+        "depends_on": [
+          "mode-read-legacy-write-dual",
+          "decision-matrix-ecrans"
+        ],
+        "notes": "Pilotes: preferences utilisateur, shopping list.",
+        "created_at": "2026-02-07T10:23:10.0000000+01:00",
+        "updated_at": "2026-02-07T10:23:10.0000000+01:00"
+      },
+      "jobs-reconciliation": {
+        "id": "jobs-reconciliation",
+        "description": "Verifier coherence via jobs de reconciliation et alertes",
+        "status": "todo",
+        "depends_on": [
+          "dual-write-features-pilotes",
+          "strategie-observabilite-divergences"
+        ],
+        "notes": "Risque divergences: reconciliation batch + alertes.",
+        "created_at": "2026-02-07T10:23:10.0000000+01:00",
+        "updated_at": "2026-02-07T10:23:10.0000000+01:00"
+      },
+      "bascule-lecture-par-feature": {
+        "id": "bascule-lecture-par-feature",
+        "description": "Basculer la lecture Firestore par feature stabilisee",
+        "status": "todo",
+        "depends_on": [
+          "jobs-reconciliation"
+        ],
+        "notes": "Coexistence par feature, migration ecran par ecran.",
+        "created_at": "2026-02-07T10:23:10.0000000+01:00",
+        "updated_at": "2026-02-07T10:23:10.0000000+01:00"
+      },
+      "fallback-legacy-lecture": {
+        "id": "fallback-legacy-lecture",
+        "description": "Garder un fallback legacy sur erreurs et surveiller latence/ecarts",
+        "status": "todo",
+        "depends_on": [
+          "bascule-lecture-par-feature"
+        ],
+        "notes": "Risque latence: caches backend, indexes Firestore.",
+        "created_at": "2026-02-07T10:23:10.0000000+01:00",
+        "updated_at": "2026-02-07T10:23:10.0000000+01:00"
+      },
+      "stabilisation-desactiver-legacy-writes": {
+        "id": "stabilisation-desactiver-legacy-writes",
+        "description": "Desactiver legacy writes pour features migrees et cleanup",
+        "status": "todo",
+        "depends_on": [
+          "fallback-legacy-lecture"
+        ],
+        "notes": "",
+        "created_at": "2026-02-07T10:23:10.0000000+01:00",
+        "updated_at": "2026-02-07T10:23:10.0000000+01:00"
+      },
+      "plan-migration-ecran-par-ecran": {
+        "id": "plan-migration-ecran-par-ecran",
+        "description": "Plan de migration ecran par ecran avec criteres de bascule",
+        "status": "todo",
+        "depends_on": [
+          "decision-matrix-ecrans",
+          "schema-firestore-et-indexes"
+        ],
+        "notes": "Livrable attendu: plan de migration par ecran.",
+        "created_at": "2026-02-07T10:23:10.0000000+01:00",
+        "updated_at": "2026-02-07T10:23:10.0000000+01:00"
+      },
+      "diagramme-identite-auth": {
+        "id": "diagramme-identite-auth",
+        "description": "Diagramme d’identite et flux d’auth unifie (JWT + Firebase)",
+        "status": "todo",
+        "depends_on": [
+          "auth-coexistence-tokens"
+        ],
+        "notes": "Livrable attendu.",
+        "created_at": "2026-02-07T10:23:10.0000000+01:00",
+        "updated_at": "2026-02-07T10:23:10.0000000+01:00"
+      },
+      "strategie-observabilite-divergences": {
+        "id": "strategie-observabilite-divergences",
+        "description": "Mettre en place logs comparatifs et alertes de divergence",
+        "status": "todo",
+        "depends_on": [
+          "archi-cible-validee"
+        ],
+        "notes": "Observabilite: logs comparatifs et alertes.",
+        "created_at": "2026-02-07T10:23:10.0000000+01:00",
+        "updated_at": "2026-02-07T10:23:10.0000000+01:00"
+      },
+      "decision-matrix-ecrans": {
+        "id": "decision-matrix-ecrans",
+        "description": "Decision matrix simple des ecrans pilotes et sensibles",
+        "status": "done",
+        "depends_on": [
+          "archi-cible-validee"
+        ],
+        "notes": "Pilotes: preferences utilisateur, shopping list. Sensibles: weekly plan, recipes plus tard.",
+        "created_at": "2026-02-07T10:23:10.0000000+01:00",
+        "updated_at": "2026-02-07T13:27:21.164Z"
+      }
+    },
+    "root": "migration-firebase"
+  }
+}

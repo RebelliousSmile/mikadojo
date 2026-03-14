@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Mikado Kanban View</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="page-header">
+      <div class="brand">
+        <div class="brand-mark">MK</div>
+        <div>
+          <div class="brand-title">Mikado Kanban</div>
+          <div class="brand-sub">Local JSON files to Kanban with dependencies</div>
+        </div>
+      </div>
+      <div class="controls">
+        <label class="file-button" for="fileInput">Load JSON files</label>
+        <input
+          id="fileInput"
+          type="file"
+          accept="*/*"
+          multiple
+          webkitdirectory
+          directory
+        />
+        <button id="loadSample" class="ghost-button" type="button">Load sample</button>
+        <button id="downloadJson" class="ghost-button" type="button" hidden>
+          Download updated JSON
+        </button>
+      </div>
+    </header>
+
+    <main>
+      <section id="tabs" class="tabs" hidden></section>
+
+      <section class="summary" id="summary">
+        <div class="summary-card">
+          <div class="summary-label">Goal</div>
+          <div class="summary-value" id="goal">-</div>
+        </div>
+        <div class="summary-card">
+          <div class="summary-label">Root</div>
+          <div class="summary-value" id="root">-</div>
+        </div>
+        <div class="summary-card">
+          <div class="summary-label">Updated</div>
+          <div class="summary-value" id="updated">-</div>
+        </div>
+        <div class="summary-card">
+          <div class="summary-label">Stats</div>
+          <div class="summary-value" id="stats">-</div>
+        </div>
+      </section>
+
+      <div class="view-toggle">
+        <button id="viewKanban" class="view-button active" type="button">Kanban</button>
+        <button id="viewGraph" class="view-button" type="button">Graph</button>
+      </div>
+
+      <section id="error" class="error" hidden></section>
+
+      <section id="board" class="board"></section>
+      <section id="graphView" class="graph-view" hidden></section>
+    </main>
+
+    <footer class="page-footer">
+      <span>Tip: dependencies are listed on each card. Unmet deps are highlighted.</span>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dagre@0.8.5/dist/dagre.min.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>

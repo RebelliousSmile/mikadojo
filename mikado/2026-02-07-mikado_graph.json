@@ -3,7 +3,7 @@
     "version": "1.0",
     "goal": "Utiliser Firebase comme persistance pour remplacer PostgreSQL",
     "created_at": "2026-02-07T10:19:39.3312612+01:00",
-    "updated_at": "2026-02-11T12:51:57.436Z",
+    "updated_at": "2026-03-14T12:14:23.735Z",
     "nodes": {
       "migration-firebase": {
         "id": "migration-firebase",
@@ -81,8 +81,32 @@
           "archi-cible-validee"
         ],
         "notes": "Dual-write controle: ecriture DB actuelle + Firestore.",
+        "actions": [
+          {
+            "id": "impl-dual-write-service",
+            "type": "claude-code",
+            "label": "Implementer le DualWriteService",
+            "config": {
+              "prompt": "Implemente un DualWriteService qui ecrit dans PostgreSQL et Firestore en parallele, avec flag par feature",
+              "cwd": "C:/dev-perso/meal-planner"
+            },
+            "status": "pending",
+            "result": null
+          },
+          {
+            "id": "run-tests-dual-write",
+            "type": "shell",
+            "label": "Lancer les tests",
+            "config": {
+              "command": "npm test",
+              "cwd": "C:/dev-perso/meal-planner"
+            },
+            "status": "pending",
+            "result": null
+          }
+        ],
         "created_at": "2026-02-07T10:23:10.0000000+01:00",
-        "updated_at": "2026-02-11T12:51:57.436Z"
+        "updated_at": "2026-03-14T12:14:23.735Z"
       },
       "auth-coexistence-tokens": {
         "id": "auth-coexistence-tokens",
@@ -92,6 +116,41 @@
           "table-liaison-useridentitymap"
         ],
         "notes": "Livrable attendu: diagramme d’identite et flux auth unifie.",
+        "actions": [
+          {
+            "id": "impl-auth-middleware",
+            "type": "claude-code",
+            "label": "Implementer le middleware auth unifie",
+            "config": {
+              "prompt": "Cree un middleware ASP.NET qui accepte JWT Identity et Firebase ID token, unifie l’identite via UserIdentityMap",
+              "cwd": "C:/dev-perso/meal-planner"
+            },
+            "status": "pending",
+            "result": null
+          },
+          {
+            "id": "run-tests-auth",
+            "type": "shell",
+            "label": "Lancer les tests auth",
+            "config": {
+              "command": "dotnet test",
+              "cwd": "C:/dev-perso/meal-planner"
+            },
+            "status": "pending",
+            "result": null
+          },
+          {
+            "id": "create-pr-auth",
+            "type": "gh-cli",
+            "label": "Creer la PR auth coexistence",
+            "config": {
+              "command": "pr create --title ‘Auth coexistence JWT + Firebase’ --body ‘{{prev_result}}’",
+              "cwd": "C:/dev-perso/meal-planner"
+            },
+            "status": "pending",
+            "result": null
+          }
+        ],
         "created_at": "2026-02-07T10:23:10.0000000+01:00",
         "updated_at": "2026-02-11T12:51:56.748Z"
       },
@@ -104,6 +163,30 @@
           "table-liaison-useridentitymap"
         ],
         "notes": "",
+        "actions": [
+          {
+            "id": "gen-migration-script",
+            "type": "claude-code",
+            "label": "Generer le script de migration batch",
+            "config": {
+              "prompt": "Cree un script de migration batch qui copie les donnees PostgreSQL vers Firestore en utilisant le schema et le mapping definis",
+              "cwd": "C:/dev-perso/meal-planner"
+            },
+            "status": "pending",
+            "result": null
+          },
+          {
+            "id": "run-migration-dry",
+            "type": "shell",
+            "label": "Lancer la migration en dry-run",
+            "config": {
+              "command": "node scripts/migrate-to-firestore.js --dry-run",
+              "cwd": "C:/dev-perso/meal-planner"
+            },
+            "status": "pending",
+            "result": null
+          }
+        ],
         "created_at": "2026-02-07T10:23:10.0000000+01:00",
         "updated_at": "2026-02-11T12:51:42.788Z"
       },
@@ -173,6 +256,19 @@
           "schema-firestore-et-indexes"
         ],
         "notes": "Livrable attendu: plan de migration par ecran.",
+        "actions": [
+          {
+            "id": "gen-migration-plan",
+            "type": "claude-code",
+            "label": "Generer le plan de migration par ecran",
+            "config": {
+              "prompt": "Genere un plan de migration detaille ecran par ecran avec criteres de bascule, basé sur la decision matrix et le schema Firestore",
+              "cwd": "C:/dev-perso/meal-planner"
+            },
+            "status": "pending",
+            "result": null
+          }
+        ],
         "created_at": "2026-02-07T10:23:10.0000000+01:00",
         "updated_at": "2026-02-07T10:23:10.0000000+01:00"
       },
@@ -195,6 +291,19 @@
           "archi-cible-validee"
         ],
         "notes": "Observabilite: logs comparatifs et alertes.",
+        "actions": [
+          {
+            "id": "impl-comparison-logger",
+            "type": "claude-code",
+            "label": "Implementer le logger comparatif",
+            "config": {
+              "prompt": "Cree un service de logs comparatifs qui compare les lectures PostgreSQL et Firestore et enregistre les divergences",
+              "cwd": "C:/dev-perso/meal-planner"
+            },
+            "status": "pending",
+            "result": null
+          }
+        ],
         "created_at": "2026-02-07T10:23:10.0000000+01:00",
         "updated_at": "2026-02-07T10:23:10.0000000+01:00"
       },

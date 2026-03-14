@@ -1,0 +1,353 @@
+{
+  "mikado_graph": {
+    "version": "1.0",
+    "goal": "Dicter une recette mobile et la sauvegarder proprement",
+    "created_at": "2026-03-14T15:31:08.762Z",
+    "updated_at": "2026-03-14T16:04:08.412Z",
+    "nodes": {
+      "goal": {
+        "id": "goal",
+        "description": "Dicter une recette sur mobile et persister une recette valide, robuste et testée.",
+        "status": "todo",
+        "depends_on": [
+          "policy-recipe-contract",
+          "mobile-voice-capture",
+          "no-speech-fallback",
+          "smart-transcript-parser",
+          "dictation-api-flow",
+          "secure-persistence",
+          "quality-gates"
+        ],
+        "notes": "",
+        "created_at": "2026-03-14T15:31:08.762Z",
+        "updated_at": "2026-03-14T16:02:17.465Z",
+        "actions": [
+          {
+            "id": "aidd-brainstorm",
+            "type": "repo-template",
+            "label": "AIDD Clarify",
+            "config": {
+              "prompt": "Run template aidd-brainstorm with request: Dicter une recette mobile de bout en bout, y compris UX, API et persistence."
+            },
+            "status": "pending",
+            "result": null
+          },
+          {
+            "id": "aidd-new-issue",
+            "type": "repo-template",
+            "label": "AIDD Issue",
+            "config": {
+              "prompt": "Run template aidd-new-issue with requirements: Dictee mobile recette + parser + API + persistence + quality gates."
+            },
+            "status": "pending",
+            "result": null
+          },
+          {
+            "id": "aidd-isolate",
+            "type": "repo-template",
+            "label": "AIDD Isolate",
+            "config": {
+              "prompt": "Run template aidd-isolate with scope: voice-dictation-recipe-high-level."
+            },
+            "status": "pending",
+            "result": null
+          },
+          {
+            "id": "aidd-create-request",
+            "type": "repo-template",
+            "label": "AIDD PR",
+            "config": {
+              "prompt": "Run template aidd-create-request with summary: Voice dictation recipe feature complete and validated."
+            },
+            "status": "pending",
+            "result": null
+          },
+          {
+            "id": "aidd-learn",
+            "type": "repo-template",
+            "label": "AIDD Learn",
+            "config": {
+              "prompt": "Run template aidd-learn with outcome: Lessons learned from voice dictation implementation and validation."
+            },
+            "status": "pending",
+            "result": null
+          }
+        ]
+      },
+      "policy-recipe-contract": {
+        "id": "policy-recipe-contract",
+        "description": "Verrouiller le contrat Recipe cible et la politique de gestion des données incomplètes.",
+        "status": "todo",
+        "depends_on": [],
+        "created_at": "2026-03-14T15:31:12.717Z",
+        "updated_at": "2026-03-14T16:01:57.002Z",
+        "actions": [
+          {
+            "id": "aidd-plan",
+            "type": "repo-template",
+            "label": "AIDD Plan",
+            "config": {
+              "prompt": "Run template aidd-plan with objective: Verrouiller le contrat Recipe et la policy de gestion des donnees incompletes pour la dictee vocale."
+            },
+            "status": "pending",
+            "result": null
+          }
+        ]
+      },
+      "mobile-voice-capture": {
+        "id": "mobile-voice-capture",
+        "description": "Mettre en place la capture vocale mobile fiable avec reconnaissance en français.",
+        "status": "todo",
+        "depends_on": [],
+        "created_at": "2026-03-14T15:31:12.737Z",
+        "updated_at": "2026-03-14T16:02:17.483Z",
+        "actions": [
+          {
+            "id": "aidd-implement",
+            "type": "repo-template",
+            "label": "AIDD Implement",
+            "config": {
+              "prompt": "Run template aidd-implement with plan: Implement mobile voice capture with French locale and graceful fallback."
+            },
+            "status": "pending",
+            "result": null
+          },
+          {
+            "id": "aidd-assert",
+            "type": "repo-template",
+            "label": "AIDD Assert",
+            "config": {
+              "prompt": "Run template aidd-assert with changes: Mobile voice capture behavior and fallback availability checks."
+            },
+            "status": "pending",
+            "result": null
+          },
+          {
+            "id": "aidd-commit",
+            "type": "repo-template",
+            "label": "AIDD Commit",
+            "config": {
+              "prompt": "Run template aidd-commit with intent: Commit mobile voice capture implementation."
+            },
+            "status": "pending",
+            "result": null
+          }
+        ]
+      },
+      "no-speech-fallback": {
+        "id": "no-speech-fallback",
+        "description": "Garantir un parcours manuel complet si Web Speech API est indisponible.",
+        "status": "todo",
+        "depends_on": [
+          "mobile-voice-capture"
+        ],
+        "created_at": "2026-03-14T15:31:16.585Z",
+        "updated_at": "2026-03-14T16:03:57.350Z",
+        "actions": [
+          {
+            "id": "aidd-implement",
+            "type": "repo-template",
+            "label": "AIDD Implement",
+            "config": {
+              "prompt": "Run template aidd-implement with plan: Build full manual fallback journey when Web Speech API is unavailable."
+            },
+            "status": "pending",
+            "result": null
+          },
+          {
+            "id": "aidd-assert",
+            "type": "repo-template",
+            "label": "AIDD Assert",
+            "config": {
+              "prompt": "Run template aidd-assert with changes: Validate manual fallback accessibility and correctness."
+            },
+            "status": "pending",
+            "result": null
+          },
+          {
+            "id": "aidd-commit",
+            "type": "repo-template",
+            "label": "AIDD Commit",
+            "config": {
+              "prompt": "Run template aidd-commit with intent: Commit no-speech fallback journey implementation."
+            },
+            "status": "pending",
+            "result": null
+          }
+        ]
+      },
+      "smart-transcript-parser": {
+        "id": "smart-transcript-parser",
+        "description": "Transformer le transcript brut en structure recette exploitable (titre, ingrédients, étapes).",
+        "status": "todo",
+        "depends_on": [
+          "mobile-voice-capture"
+        ],
+        "created_at": "2026-03-14T15:31:16.614Z",
+        "updated_at": "2026-03-14T16:02:17.496Z",
+        "actions": [
+          {
+            "id": "aidd-implement",
+            "type": "repo-template",
+            "label": "AIDD Implement",
+            "config": {
+              "prompt": "Run template aidd-implement with plan: Implement transcript parser for title, ingredients and steps extraction."
+            },
+            "status": "pending",
+            "result": null
+          },
+          {
+            "id": "aidd-assert",
+            "type": "repo-template",
+            "label": "AIDD Assert",
+            "config": {
+              "prompt": "Run template aidd-assert with changes: Verify parser robustness on noisy transcript inputs."
+            },
+            "status": "pending",
+            "result": null
+          },
+          {
+            "id": "aidd-commit",
+            "type": "repo-template",
+            "label": "AIDD Commit",
+            "config": {
+              "prompt": "Run template aidd-commit with intent: Commit smart transcript parser implementation."
+            },
+            "status": "pending",
+            "result": null
+          }
+        ]
+      },
+      "dictation-api-flow": {
+        "id": "dictation-api-flow",
+        "description": "Implémenter le flux API dictée (DTO + commande CQRS) basé sur le parser et la policy.",
+        "status": "todo",
+        "depends_on": [
+          "smart-transcript-parser",
+          "policy-recipe-contract"
+        ],
+        "created_at": "2026-03-14T15:31:20.975Z",
+        "updated_at": "2026-03-14T16:04:00.441Z",
+        "actions": [
+          {
+            "id": "aidd-implement",
+            "type": "repo-template",
+            "label": "AIDD Implement",
+            "config": {
+              "prompt": "Run template aidd-implement with plan: Implement dictation API DTO, command and CQRS flow."
+            },
+            "status": "pending",
+            "result": null
+          },
+          {
+            "id": "aidd-assert",
+            "type": "repo-template",
+            "label": "AIDD Assert",
+            "config": {
+              "prompt": "Run template aidd-assert with changes: Validate API contract, DTO validation and CQRS behavior."
+            },
+            "status": "pending",
+            "result": null
+          },
+          {
+            "id": "aidd-commit",
+            "type": "repo-template",
+            "label": "AIDD Commit",
+            "config": {
+              "prompt": "Run template aidd-commit with intent: Commit dictation API flow implementation."
+            },
+            "status": "pending",
+            "result": null
+          }
+        ]
+      },
+      "secure-persistence": {
+        "id": "secure-persistence",
+        "description": "Lier l'auteur via JWT et persister la recette Mongo en conformité avec le contrat.",
+        "status": "todo",
+        "depends_on": [
+          "dictation-api-flow"
+        ],
+        "created_at": "2026-03-14T15:31:20.992Z",
+        "updated_at": "2026-03-14T16:04:04.964Z",
+        "actions": [
+          {
+            "id": "aidd-implement",
+            "type": "repo-template",
+            "label": "AIDD Implement",
+            "config": {
+              "prompt": "Run template aidd-implement with plan: Persist recipe with JWT author binding and Mongo compliance."
+            },
+            "status": "pending",
+            "result": null
+          },
+          {
+            "id": "aidd-assert",
+            "type": "repo-template",
+            "label": "AIDD Assert",
+            "config": {
+              "prompt": "Run template aidd-assert with changes: Validate secure persistence and author ownership constraints."
+            },
+            "status": "pending",
+            "result": null
+          },
+          {
+            "id": "aidd-commit",
+            "type": "repo-template",
+            "label": "AIDD Commit",
+            "config": {
+              "prompt": "Run template aidd-commit with intent: Commit secure persistence implementation."
+            },
+            "status": "pending",
+            "result": null
+          }
+        ]
+      },
+      "quality-gates": {
+        "id": "quality-gates",
+        "description": "Couvrir parser, API et parcours mobile avec tests unitaires, intégration et e2e.",
+        "status": "todo",
+        "depends_on": [
+          "mobile-voice-capture",
+          "smart-transcript-parser",
+          "secure-persistence"
+        ],
+        "created_at": "2026-03-14T15:31:23.014Z",
+        "updated_at": "2026-03-14T16:04:08.412Z",
+        "actions": [
+          {
+            "id": "aidd-assert",
+            "type": "repo-template",
+            "label": "AIDD Assert",
+            "config": {
+              "prompt": "Run template aidd-assert with changes: Execute and analyze unit, integration and e2e quality gates."
+            },
+            "status": "pending",
+            "result": null
+          },
+          {
+            "id": "aidd-review-code",
+            "type": "repo-template",
+            "label": "AIDD Review Code",
+            "config": {
+              "prompt": "Run template aidd-review-code on changes: Parser, API and mobile dictation implementation."
+            },
+            "status": "pending",
+            "result": null
+          },
+          {
+            "id": "aidd-review-functional",
+            "type": "repo-template",
+            "label": "AIDD Review Functional",
+            "config": {
+              "prompt": "Run template aidd-review-functional for scope: Voice dictation user journey and acceptance criteria."
+            },
+            "status": "pending",
+            "result": null
+          }
+        ]
+      }
+    },
+    "root": "goal"
+  }
+}

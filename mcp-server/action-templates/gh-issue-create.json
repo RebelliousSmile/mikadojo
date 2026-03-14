@@ -1,0 +1,9 @@
+{
+  "id": "gh-issue-create",
+  "type": "gh-cli",
+  "label": "Create a GitHub Issue",
+  "description": "Create a GitHub issue with title and body",
+  "config": {
+    "command": "issue create --title \"{{title}}\" --body \"{{body}}\""
+  }
+}

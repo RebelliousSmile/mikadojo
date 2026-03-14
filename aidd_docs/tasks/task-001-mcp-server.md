@@ -56,6 +56,7 @@ kanban-view/
         repo-tools.ts             # register_repo, list_repos, read_dir, read_file
       resources/
         graph-resources.ts        # mikado://graphs/*, mikado://graphs/{name}/nodes/{id}
+        guide.md                  # Contenu markdown du guide exposé via mikado://guide
       executors/
         claude-executor.ts        # Exécute claude --print
         gh-executor.ts            # Exécute gh ...
@@ -117,6 +118,19 @@ kanban-view/
 | `mikado://graphs/{graphName}` | Données complètes d'un graph |
 | `mikado://graphs/{graphName}/nodes/{nodeId}` | Données d'un noeud |
 | `mikado://repos` | Liste des repos enregistrés |
+| `mikado://schema` | Schéma complet JSON (graph, node, action, statuts) — doc machine-readable |
+| `mikado://guide` | Guide d'utilisation : concepts Mikado, workflows, conventions, exemples |
+
+### Resource guide (`mikado://guide`)
+
+Exposé automatiquement aux agents IA qui se connectent. Contient :
+- **Concepts** : qu'est-ce qu'un Mikado graph, notion de root/deps, statuts possibles
+- **Workflows** : comment créer un graph, ajouter des noeuds avec dépendances, progression
+- **Conventions** : nommage des nodeId (kebab-case), structure des actions
+- **Exemples** : scénario complet de création d'un graph pour un projet meal-planner
+- **Templates** : liste des templates d'actions disponibles avec leurs paramètres
+
+Le contenu est un markdown statique dans `mcp-server/src/resources/guide.md`, exposé via la resource MCP.
 
 ---
 
@@ -210,30 +224,31 @@ kanban-view/
 4. `src/data/graph-store.ts` — lecture/écriture JSON mikado
 5. `src/tools/graph-tools.ts` — 4 tools CRUD graph
 6. `src/tools/node-tools.ts` — 6 tools CRUD nodes
-7. `src/resources/graph-resources.ts` — resources MCP
-8. `src/index.ts` — SSE transport, registration
-9. Test : connecter depuis un repo externe via `.mcp.json`
+7. `src/resources/graph-resources.ts` — resources MCP (graphs, nodes, repos, schema)
+8. `src/resources/guide.md` — guide markdown exposé via `mikado://guide`
+9. `src/index.ts` — SSE transport, registration
+10. Test : connecter depuis un repo externe via `.mcp.json`
 
 ### Phase 2 — Repo Tools
-10. `src/data/repo-registry.ts` — registre persistant (JSON)
-11. `src/tools/repo-tools.ts` — register, list, read_dir, read_file
-12. Test : lire des fichiers de meal-planner depuis Claude Code
+11. `src/data/repo-registry.ts` — registre persistant (JSON)
+12. `src/tools/repo-tools.ts` — register, list, read_dir, read_file
+13. Test : lire des fichiers de meal-planner depuis Claude Code
 
 ### Phase 3 — Action System
-13. `src/executors/claude-executor.ts` — child_process pour claude CLI
-14. `src/executors/gh-executor.ts` — child_process pour gh CLI
-15. `src/executors/shell-executor.ts` — child_process générique
-16. `src/tools/action-tools.ts` — execute_action, execute_node_actions, list_templates
-17. Créer templates centralisés dans `action-templates/`
-18. Gestion du `{{prev_result}}` entre actions séquentielles
-19. Stockage des résultats d'actions dans le JSON du node
+14. `src/executors/claude-executor.ts` — child_process pour claude CLI
+15. `src/executors/gh-executor.ts` — child_process pour gh CLI
+16. `src/executors/shell-executor.ts` — child_process générique
+17. `src/tools/action-tools.ts` — execute_action, execute_node_actions, list_templates
+18. Créer templates centralisés dans `action-templates/`
+19. Gestion du `{{prev_result}}` entre actions séquentielles
+20. Stockage des résultats d'actions dans le JSON du node
 
 ### Phase 4 — Enrichissement Frontend
-20. Enrichir `server.js` avec les endpoints actions + file-watch
-21. Ajouter panneau actions dans les cartes node (`app.js`)
-22. Bouton "Run Actions" + polling status
-23. Affichage résultats d'actions
-24. Auto-refresh UI quand les JSON changent
+21. Enrichir `server.js` avec les endpoints actions + file-watch
+22. Ajouter panneau actions dans les cartes node (`app.js`)
+23. Bouton "Run Actions" + polling status
+24. Affichage résultats d'actions
+25. Auto-refresh UI quand les JSON changent
 
 ---
 
@@ -244,3 +259,75 @@ kanban-view/
 3. **Actions** : Depuis le kanban viewer, lancer une action claude-code sur meal-planner → vérifier l'exécution
 4. **Templates** : Créer un template dans `meal-planner/.mikado/actions/` → vérifier qu'il apparaît dans `list_action_templates`
 5. **Chainage** : Exécuter `execute_node_actions` sur un noeud avec 2 actions → vérifier que `{{prev_result}}` est substitué
+6. **Guide** : Depuis Claude Code, lire `mikado://guide` → vérifier que le contenu markdown est retourné
+
+---
+
+## Work in Progress
+
+### Statut actuel : Toutes les phases complétées
+
+| Phase | Statut | Détails |
+|-------|--------|---------|
+| Phase 1 — MCP Server Core | `done` | CRUD graphs/nodes, resources, SSE transport — compilé OK |
+| Phase 2 — Repo Tools | `done` | Registre repos, lecture fichiers/dossiers — compilé OK |
+| Phase 3 — Action System | `done` | Exécuteurs (claude, gh, shell), templates, chainage — compilé OK |
+| Phase 4 — Frontend | `done` | UI actions, auto-refresh, run-actions — serveur OK |
+
+### Phase 1 — Livrables complétés
+- [x] `mcp-server/package.json` + `tsconfig.json` — init projet, deps (MCP SDK, express, zod, typescript)
+- [x] `src/config.ts` — MCP_PORT=3100, MIKADO_DIR, STATUS_OPTIONS
+- [x] `src/schemas.ts` — Zod schemas (NodeStatus, ActionStatus, ActionConfig, Action, Node, Graph)
+- [x] `src/data/graph-store.ts` — listGraphs, readGraph, writeGraph, deleteGraph, graphExists
+- [x] `src/tools/graph-tools.ts` — 4 tools CRUD graph (list, get, create, delete)
+- [x] `src/tools/node-tools.ts` — 6 tools CRUD nodes (get, add, update, delete, update_status, get_actionable)
+- [x] `src/resources/graph-resources.ts` — 5 resources MCP (graphs, graph, node, schema, guide)
+- [x] `src/resources/guide.md` — Guide markdown (concepts, workflow, conventions, exemples)
+- [x] `src/index.ts` — Entry point SSE transport Express multi-session
+- [x] `npm install` + `npm run build` — 0 erreurs TypeScript
+
+### Phase 2 — Livrables complétés
+- [x] `src/config.ts` — ajout REPO_REGISTRY_PATH
+- [x] `src/data/repo-registry.ts` — registre persistant JSON (register, list, get, remove)
+- [x] `src/tools/repo-tools.ts` — 4 tools (register_repo, list_repos, read_repo_directory, read_repo_file)
+- [x] `src/resources/graph-resources.ts` — ajout resource `mikado://repos`
+- [x] `src/index.ts` — wiring registerRepoTools
+- [x] `npm run build` — 0 erreurs TypeScript
+
+### Phase 3 — Livrables complétés
+- [x] `src/executors/shell-executor.ts` — exécuteur shell générique (cross-platform)
+- [x] `src/executors/claude-executor.ts` — exécuteur claude CLI (`claude --print`)
+- [x] `src/executors/gh-executor.ts` — exécuteur gh CLI
+- [x] `src/tools/action-tools.ts` — 3 tools (list_action_templates, execute_action, execute_node_actions)
+- [x] `action-templates/` — 4 templates (claude-code-task, gh-pr-create, gh-issue-create, run-tests)
+- [x] `src/config.ts` — ajout ACTION_TEMPLATES_DIR
+- [x] `src/index.ts` — wiring registerActionTools
+- [x] `{{prev_result}}` substitution entre actions séquentielles
+- [x] Sauvegarde status/result des actions dans le graph JSON
+- [x] `npm run build` — 0 erreurs TypeScript
+
+### Phase 4 — Livrables complétés
+- [x] `server.js` — endpoints `POST /api/actions/execute`, `POST /api/graphs/:name/nodes/:id/run-actions`, `GET /api/last-change`
+- [x] `server.js` — file-watch sur mikado/ pour détecter les changements JSON
+- [x] `app.js` — panneau actions sur les cartes node (icônes statut, labels, types)
+- [x] `app.js` — bouton "Run All" pour exécuter les actions d'un noeud séquentiellement
+- [x] `app.js` — affichage résultats d'actions (toggle, pre-formatted, truncated)
+- [x] `app.js` — auto-refresh polling toutes les 3s via `/api/last-change`
+- [x] `app.js` — `{{prev_result}}` substitution côté serveur
+- [x] `styles.css` — styles action-panel, action-item, action-run-btn, action-result
+- [x] server.js démarre sans erreurs
+
+### Prochaines étapes
+- Aucune — toutes les phases sont complétées
+- Tests manuels recommandés (voir section Vérification)
+
+### Décisions prises
+- Architecture : MCP server sur l'hôte (pas Docker)
+- Templates : centralisés dans kanban-view + override par repo dans `.mikado/actions/`
+- Documentation : resources `mikado://schema` et `mikado://guide` exposées aux agents
+- SSE transport : Express + Map<sessionId, SSEServerTransport> pour multi-clients
+- graph-store : unwrap/wrap automatique du format `{ mikado_graph: ... }`
+- ResourceTemplate pour les resources paramétrées (graphName, nodeId)
+
+### Questions ouvertes
+- Aucune pour l'instant

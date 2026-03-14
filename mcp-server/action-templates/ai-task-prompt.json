@@ -1,0 +1,10 @@
+{
+  "id": "ai-task-prompt",
+  "type": "any AI harness",
+  "label": "Run AI task from prompt",
+  "description": "Execute a generic AI task on the target repo using a prompt",
+  "config": {
+    "prompt": "{{prompt}}",
+    "allowedTools": ["Read", "Write", "Bash"]
+  }
+}

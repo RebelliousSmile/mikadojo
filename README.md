@@ -198,6 +198,10 @@ cd mcp-server
 pnpm run dev    # tsx watch mode, no build needed
 ```
 
+## Credits
+
+Created by [Emmanuel Conrardy](https://github.com/EmmanuelConrardy) -- original concept, Mikado graph engine, and Kanban visualization.
+
 ## License
 
-MIT
+[MIT](LICENSE)

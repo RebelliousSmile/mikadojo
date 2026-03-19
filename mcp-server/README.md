@@ -1,6 +1,6 @@
 # Kanban MCP Server
 
-An MCP (Model Context Protocol) server that exposes your local Mikado/Kanban board to AI agents. External repositories can connect to it through Claude Code and manage task graphs, track dependencies, and execute actions -- all reflected in real time on the kanban web UI.
+An MCP (Model Context Protocol) server that exposes your local Mikado/Kanban board to AI agents. External repositories can connect to it through Claude Code and manage task graphs and track dependencies -- all reflected in real time on the kanban web UI.
 
 ## Table of Contents
 
@@ -11,7 +11,6 @@ An MCP (Model Context Protocol) server that exposes your local Mikado/Kanban boa
 - [Available MCP Tools](#available-mcp-tools)
 - [Available MCP Resources](#available-mcp-resources)
 - [Usage Examples](#usage-examples)
-- [Action Templates](#action-templates)
 - [Auto-Refresh](#auto-refresh)
 - [Troubleshooting](#troubleshooting)
 
@@ -19,9 +18,6 @@ An MCP (Model Context Protocol) server that exposes your local Mikado/Kanban boa
 
 - **Node.js 18+**
 - **npm**
-- **Claude Code CLI** -- required for `claude-code` action types
-- **GitHub CLI (`gh`)** -- required for `gh-cli` action types
-
 ## Installation
 
 ```bash
@@ -104,7 +100,7 @@ After adding the configuration, restart Claude Code (or start a new session). Th
 
 ## Available MCP Tools
 
-The server exposes 17 tools organized into four categories.
+The server exposes 14 tools organized into three categories.
 
 ### Graph Management
 
@@ -121,7 +117,7 @@ The server exposes 17 tools organized into four categories.
 | ---------------------- | ------------------------------------------------------------------------------- |
 | `get_node`             | Get a specific node from a graph                                                |
 | `add_node`             | Add a new node to a graph                                                       |
-| `update_node`          | Update fields of an existing node                                               |
+| `update_node`          | Update fields of an existing node (including `status`)                          |
 | `delete_node`          | Delete a node and clean up references                                           |
 | `update_node_status`   | Change the status of a node (`todo`, `doing`, `in-progress`, `blocked`, `done`) |
 | `get_actionable_nodes` | Get nodes whose dependencies are all done and that are not done themselves      |
@@ -135,14 +131,6 @@ The server exposes 17 tools organized into four categories.
 | `read_repo_directory` | List files and subdirectories in a repo (supports recursive listing) |
 | `read_repo_file`      | Read the contents of a file in a registered repo                     |
 
-### Actions
-
-| Tool                    | Description                                                              |
-| ----------------------- | ------------------------------------------------------------------------ |
-| `list_action_templates` | List available action templates (centralized + repo overrides)           |
-| `execute_action`        | Execute a single action on a repository                                  |
-| `execute_node_actions`  | Execute all actions of a node sequentially, passing results between them |
-
 ## Available MCP Resources
 
 Resources provide read-only data that AI agents can reference.
@@ -153,7 +141,7 @@ Resources provide read-only data that AI agents can reference.
 | `mikado://graphs/{graphName}`                | Full graph data                                          |
 | `mikado://graphs/{graphName}/nodes/{nodeId}` | Single node data                                         |
 | `mikado://repos`                             | Registered repositories                                  |
-| `mikado://schema`                            | JSON schema describing graph, node, and action structure |
+| `mikado://schema`                            | JSON schema describing graph and node structure          |
 | `mikado://guide`                             | Usage guide for AI agents                                |
 
 ## Usage Examples
@@ -222,116 +210,9 @@ get_actionable_nodes(graphName: "meal-planner-firebase")
 
 `get_actionable_nodes` returns every node whose dependencies are all `done` and whose own status is not `done` -- these are the tasks you can start right now.
 
-### 4. Add actions to a node
-
-**You:**
-
-> Add a claude-code action to setup-firestore that installs the Firebase SDK, and a shell action that runs the tests afterward.
-
-**Claude calls:**
-
-```
-update_node(
-  graphName: "meal-planner-firebase",
-  nodeId: "setup-firestore",
-  actions: [
-    {
-      id: "install-firebase",
-      type: "claude-code",
-      label: "Install Firebase SDK",
-      config: {
-        prompt: "Install the Firebase JS SDK and initialize a Firestore instance in src/lib/firebase.ts",
-        cwd: "C:/dev-perso/meal-planner",
-        allowedTools: ["Read", "Write", "Bash"]
-      },
-      status: "pending",
-      result: null
-    },
-    {
-      id: "run-tests",
-      type: "shell",
-      label: "Run tests",
-      config: {
-        command: "npm test",
-        cwd: "C:/dev-perso/meal-planner"
-      },
-      status: "pending",
-      result: null
-    }
-  ]
-)
-```
-
-Actions execute sequentially. Each action receives the previous action's output via the `{{prev_result}}` placeholder if used in its config.
-
-### 5. Execute actions and use the web UI
-
-**From Claude Code:**
-
-> Run the actions on setup-firestore.
-
-**Claude calls:**
-
-```
-execute_node_actions(
-  graphName: "meal-planner-firebase",
-  nodeId: "setup-firestore"
-)
-```
-
-This runs each action in order, updating their status (`running` / `done` / `failed`) in the JSON file as it goes. The kanban web UI picks up these changes automatically.
-
-**From the web UI:** each card with actions displays a **Run All** button. Clicking it triggers `execute_node_actions` for that node through the MCP server.
-
-## Action Templates
-
-Action templates are reusable action definitions stored as JSON files.
-
-### Centralized templates
-
-Located in `mcp-server/action-templates/`. These ship with the kanban:
-
-| Template           | Type          | Description                                     |
-| ------------------ | ------------- | ----------------------------------------------- |
-| `ai-task-prompt`   | `any AI harness` | Run a generic AI task with a provided prompt    |
-| `claude-code-task` | `claude-code` | Run Claude CLI with a prompt on the target repo |
-| `gh-pr-create`     | `gh-cli`      | Create a GitHub Pull Request                    |
-| `gh-issue-create`  | `gh-cli`      | Create a GitHub Issue                           |
-| `run-tests`        | `shell`       | Run `npm test`                                  |
-
-### Per-repo overrides
-
-A repository can override or add templates by placing JSON files in `.mikado/actions/` at the repo root:
-
-```
-C:\dev-perso\meal-planner\
-  .mikado/
-    actions/
-      run-tests.json       # overrides the centralized run-tests template
-      deploy-preview.json  # adds a new template
-```
-
-When `list_action_templates` is called with a `repoPath`, repo templates take precedence over centralized ones with the same `id`.
-
-### Template format
-
-```json
-{
-  "id": "run-tests",
-  "type": "shell",
-  "label": "Run tests",
-  "description": "Run the project test suite",
-  "config": {
-    "command": "npm test"
-  }
-}
-```
-
-Supported action types: `AI`, `claude-code`, `gh-cli`, `shell`, `repo-template`.
-
 ## Auto-Refresh
 
-The kanban web UI polls the graph JSON files and auto-refreshes every 3 seconds. Any change made through MCP tools -- adding nodes, updating statuses, running actions -- appears in the browser without a manual reload.
+The kanban web UI polls the graph JSON files and auto-refreshes every 3 seconds. Any change made through MCP tools -- adding nodes, updating statuses -- appears in the browser without a manual reload.
 
 ## Troubleshooting
 
@@ -343,9 +224,6 @@ Another process is occupying the MCP port. Find and stop it, or check if another
 - Verify the MCP server is running (`http://localhost:3100/mcp` should be reachable).
 - Check that `.mcp.json` (or `~/.claude.json`) contains the correct URL (`type: "http"`, not `"sse"`).
 - Restart your Claude Code session after adding the configuration.
-
-**Actions fail with "claude not found" or "gh not found"**
-The `claude-code` action type requires the Claude Code CLI to be installed and on your PATH. The `gh-cli` type requires the GitHub CLI (`gh`) to be installed and authenticated (`gh auth login`).
 
 **Graph changes do not appear in the web UI**
 Make sure the web UI server is running on port 5173 (`node server.js` from the kanban-view root). The browser tab must be open to receive auto-refresh updates.

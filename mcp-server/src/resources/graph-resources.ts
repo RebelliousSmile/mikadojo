@@ -23,22 +23,8 @@ const SCHEMA_DOC = {
     status: "todo | doing | in-progress | blocked | done",
     depends_on: "string[] (node IDs)",
     notes: "string (optional)",
-    actions: "Action[] (optional)",
     created_at: "string (ISO 8601, optional)",
     updated_at: "string (ISO 8601, optional)",
-  },
-  action: {
-    id: "string",
-    type: "claude-code | gh-cli | shell | repo-template",
-    label: "string",
-    config: {
-      prompt: "string (optional)",
-      command: "string (optional)",
-      cwd: "string (optional)",
-      allowedTools: "string[] (optional)",
-    },
-    status: "pending | running | done | failed",
-    result: "string | null",
   },
 };
 
@@ -125,7 +111,7 @@ export function registerGraphResources(server: McpServer): void {
   server.resource(
     "schema",
     "mikado://schema",
-    { description: "JSON schema describing graph, node, and action structure" },
+    { description: "JSON schema describing graph and node structure" },
     async () => {
       return {
         contents: [

@@ -1,9 +1,0 @@
-{
-  "id": "run-tests",
-  "type": "shell",
-  "label": "Run tests",
-  "description": "Run the project test suite",
-  "config": {
-    "command": "npm test"
-  }
-}

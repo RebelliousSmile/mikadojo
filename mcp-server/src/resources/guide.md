@@ -53,13 +53,3 @@ This creates a graph where:
 - `setup-staging` depends on both leaf nodes
 - `deploy-webapp` (root) depends on `setup-staging`
 
-## Action Types
-
-Nodes can have optional `actions` that automate work:
-
-- **`claude-code`**: Runs a Claude CLI command with a prompt on a target repository.
-- **`gh-cli`**: Executes a GitHub CLI command (e.g., create PR, create issue).
-- **`shell`**: Runs an arbitrary shell command in a specified working directory.
-- **`repo-template`**: Loads and executes an action template from a target repository.
-
-Actions are executed sequentially. The result of a previous action can be referenced in the next action's config using `{{prev_result}}`.

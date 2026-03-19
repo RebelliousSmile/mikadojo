@@ -1,9 +1,0 @@
-{
-  "id": "gh-pr-create",
-  "type": "gh-cli",
-  "label": "Create a Pull Request",
-  "description": "Create a GitHub PR with title and body",
-  "config": {
-    "command": "pr create --title \"{{title}}\" --body \"{{body}}\""
-  }
-}

@@ -131,6 +131,67 @@ describe("readGraph", () => {
   it("should reject invalid graph names", async () => {
     await expect(readGraph("bad name!")).rejects.toThrow("Invalid graph name");
   });
+
+  it("should preserve depends_on when reading YAML nodes", async () => {
+    mockedFs.stat.mockResolvedValue({ isDirectory: () => true } as any);
+    mockedFs.access.mockResolvedValue(undefined);
+    const metaData = JSON.stringify({
+      version: "1.0",
+      goal: "Test goal",
+      root: "root",
+      phase: "design",
+      created_at: "2026-01-01",
+      updated_at: "2026-01-02",
+    });
+    const rootNodeData = JSON.stringify({
+      description: "Root node",
+      status: "todo",
+      depends_on: ["child"],
+    });
+    const childNodeData = JSON.stringify({
+      description: "Child node",
+      status: "todo",
+      depends_on: [],
+    });
+    mockedFs.readFile.mockImplementation(async (p) => {
+      const name = String(p);
+      if (name.includes("_meta.yaml")) return metaData;
+      if (name.includes("root.yaml")) return rootNodeData;
+      return childNodeData;
+    });
+    mockedFs.readdir.mockResolvedValue(["_meta.yaml", "root.yaml", "child.yaml"] as any);
+
+    const result = await readGraph("test");
+    expect(result.nodes.root.depends_on).toEqual(["child"]);
+    expect(result.nodes.child.depends_on).toEqual([]);
+  });
+
+  it("should default depends_on to empty array when missing from YAML node", async () => {
+    mockedFs.stat.mockResolvedValue({ isDirectory: () => true } as any);
+    mockedFs.access.mockResolvedValue(undefined);
+    const metaData = JSON.stringify({
+      version: "1.0",
+      goal: "Test goal",
+      root: "root",
+      phase: "design",
+      created_at: "2026-01-01",
+      updated_at: "2026-01-02",
+    });
+    // Node YAML without depends_on field (e.g., from an older migration)
+    const nodeDataWithoutDeps = JSON.stringify({
+      description: "Root node",
+      status: "todo",
+    });
+    mockedFs.readFile.mockImplementation(async (p) => {
+      const name = String(p);
+      if (name.includes("_meta.yaml")) return metaData;
+      return nodeDataWithoutDeps;
+    });
+    mockedFs.readdir.mockResolvedValue(["_meta.yaml", "root.yaml"] as any);
+
+    const result = await readGraph("test");
+    expect(result.nodes.root.depends_on).toEqual([]);
+  });
 });
 
 describe("writeGraph", () => {

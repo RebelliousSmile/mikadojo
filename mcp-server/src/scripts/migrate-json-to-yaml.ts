@@ -68,7 +68,10 @@ async function migrate(): Promise<void> {
       const { id: _, actions: _a, ...nodeWithoutId } = node;
       await fs.writeFile(
         path.join(dirPath, `${nodeId}.yaml`),
-        yaml.dump(nodeWithoutId, { lineWidth: -1 }),
+        yaml.dump(
+          { depends_on: [], ...nodeWithoutId },
+          { lineWidth: -1 },
+        ),
         "utf-8",
       );
     }

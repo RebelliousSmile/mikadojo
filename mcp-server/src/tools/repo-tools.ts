@@ -9,7 +9,7 @@ export function registerRepoTools(server: McpServer): void {
     "register_repo",
     "Register an external repository by name and absolute path",
     {
-      repoName: z.string().describe("Short name for the repo (e.g. 'meal-planner')"),
+      repoName: z.string().describe("Short name for the repo (e.g. 'my-project')"),
       repoPath: z.string().describe("Absolute path to the repo on disk"),
     },
     async ({ repoName, repoPath }) => {

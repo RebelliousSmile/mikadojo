@@ -24,37 +24,39 @@ const autoLoadUrl = "api/graphs";
 const sampleData = {
   mikado_graph: {
     version: "1.0",
-    goal: "Use Firebase as persistence to replace PostgreSQL",
-    created_at: "2026-02-07T10:19:39.3312612+01:00",
-    updated_at: "2026-02-07T10:19:39.3312612+01:00",
+    goal: "Deploy web application to production",
+    created_at: "2026-03-19T10:00:00Z",
+    updated_at: "2026-03-19T10:00:00Z",
     nodes: {
-      "migration-firebase": {
-        id: "migration-firebase",
-        description: "Use Firebase as persistence to replace PostgreSQL",
+      "deploy-webapp": {
+        id: "deploy-webapp",
+        description: "Deploy web application to production",
         status: "todo",
-        depends_on: [
-          "decider-produit-firebase",
-          "modeler-donnees-et-migrations",
-          "implementer-repositories-firebase",
-          "config-env-secrets",
-          "mettre-a-jour-tests",
-          "mettre-a-jour-docs-et-compose"
-        ],
+        depends_on: ["setup-ci", "write-tests"],
         notes: "",
-        created_at: "2026-02-07T10:19:39.3312612+01:00",
-        updated_at: "2026-02-07T10:19:39.3312612+01:00"
+        created_at: "2026-03-19T10:00:00Z",
+        updated_at: "2026-03-19T10:00:00Z"
       },
-      "decider-produit-firebase": {
-        id: "decider-produit-firebase",
-        description: "Choose Firebase product and auth strategy",
+      "setup-ci": {
+        id: "setup-ci",
+        description: "Configure CI pipeline",
         status: "todo",
         depends_on: [],
         notes: "",
-        created_at: "2026-02-07T10:19:39.3312612+01:00",
-        updated_at: "2026-02-07T10:19:39.3312612+01:00"
+        created_at: "2026-03-19T10:00:00Z",
+        updated_at: "2026-03-19T10:00:00Z"
+      },
+      "write-tests": {
+        id: "write-tests",
+        description: "Write unit and integration tests",
+        status: "todo",
+        depends_on: [],
+        notes: "",
+        created_at: "2026-03-19T10:00:00Z",
+        updated_at: "2026-03-19T10:00:00Z"
       }
     },
-    root: "migration-firebase"
+    root: "deploy-webapp"
   }
 };
 

@@ -1,0 +1,8 @@
+description: "Set up staging environment"
+status: "todo"
+depends_on:
+  - "setup-ci"
+  - "write-tests"
+notes: ""
+created_at: "2026-03-19T10:00:00Z"
+updated_at: "2026-03-19T10:00:00Z"

@@ -207,8 +207,8 @@ test("load sample button displays sample data", async ({ page }) => {
   // Click "Load sample" button
   await page.locator("#loadSample").click();
 
-  // Sample data has goal "Use Firebase as persistence to replace PostgreSQL"
-  await expect(page.locator("#goal")).toContainText("Use Firebase as persistence");
+  // Sample data has goal "Deploy web application to production"
+  await expect(page.locator("#goal")).toContainText("Deploy web application");
 
   // Tabs should be hidden (only 1 graph)
   await expect(page.locator("#tabs")).toBeHidden();

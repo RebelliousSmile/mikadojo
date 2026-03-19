@@ -35,3 +35,15 @@ Thumbs.db
 
 # Local VS Code noise (keep shared settings tracked)
 .vscode/*.log
+
+# AI-driven development (local only)
+aidd_docs/
+.claude/
+CLAUDE.md
+
+# Test artifacts
+test-results/
+playwright-report/
+
+# Backup files
+*.json.bak

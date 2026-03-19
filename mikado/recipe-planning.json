@@ -1,0 +1,41 @@
+{
+  "mikado_graph": {
+    "version": "1.0",
+    "goal": "Recipe Planning Workflow",
+    "created_at": "2026-03-19T16:55:23.284Z",
+    "updated_at": "2026-03-19T16:59:31.975Z",
+    "nodes": {
+      "start-planning": {
+        "id": "start-planning",
+        "description": "Start planning a new recipe, including ideation, ingredient selection, and scheduling.",
+        "status": "todo",
+        "depends_on": [],
+        "notes": "",
+        "created_at": "2026-03-19T16:55:23.284Z",
+        "updated_at": "2026-03-19T16:55:23.284Z"
+      },
+      "define-dietary-requirements": {
+        "id": "define-dietary-requirements",
+        "description": "Identify dietary restrictions and preferences for the meal plan.",
+        "status": "todo",
+        "depends_on": [
+          "start-planning"
+        ],
+        "created_at": "2026-03-19T16:59:31.946Z",
+        "updated_at": "2026-03-19T16:59:31.946Z"
+      },
+      "set-meal-schedule": {
+        "id": "set-meal-schedule",
+        "description": "Determine the schedule and number of meals to plan for.",
+        "status": "todo",
+        "depends_on": [
+          "start-planning"
+        ],
+        "created_at": "2026-03-19T16:59:31.975Z",
+        "updated_at": "2026-03-19T16:59:31.975Z"
+      }
+    },
+    "root": "start-planning"
+  }
+}
+

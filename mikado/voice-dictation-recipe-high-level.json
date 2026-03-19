@@ -3,7 +3,7 @@
     "version": "1.0",
     "goal": "Dicter une recette mobile et la sauvegarder proprement",
     "created_at": "2026-03-14T15:31:08.762Z",
-    "updated_at": "2026-03-14T16:04:08.412Z",
+    "updated_at": "2026-03-15T10:53:45.457Z",
     "nodes": {
       "goal": {
         "id": "goal",
@@ -29,6 +29,7 @@
             "config": {
               "prompt": "Run template aidd-brainstorm with request: Dicter une recette mobile de bout en bout, y compris UX, API et persistence."
             },
+            "execution": "client",
             "status": "pending",
             "result": null
           },
@@ -39,6 +40,7 @@
             "config": {
               "prompt": "Run template aidd-new-issue with requirements: Dictee mobile recette + parser + API + persistence + quality gates."
             },
+            "execution": "client",
             "status": "pending",
             "result": null
           },
@@ -49,6 +51,7 @@
             "config": {
               "prompt": "Run template aidd-isolate with scope: voice-dictation-recipe-high-level."
             },
+            "execution": "client",
             "status": "pending",
             "result": null
           },
@@ -59,6 +62,7 @@
             "config": {
               "prompt": "Run template aidd-create-request with summary: Voice dictation recipe feature complete and validated."
             },
+            "execution": "client",
             "status": "pending",
             "result": null
           },
@@ -69,6 +73,7 @@
             "config": {
               "prompt": "Run template aidd-learn with outcome: Lessons learned from voice dictation implementation and validation."
             },
+            "execution": "client",
             "status": "pending",
             "result": null
           }
@@ -76,11 +81,11 @@
       },
       "policy-recipe-contract": {
         "id": "policy-recipe-contract",
-        "description": "Verrouiller le contrat Recipe cible et la politique de gestion des données incomplètes.",
-        "status": "todo",
+        "description": "Verrouiller le contrat Recipe cible et la politique de gestion des donnees incompletes pour la dictee vocale, en separant le flux manuel strict du futur flux dictation avec statuts draft|published.",
+        "status": "done",
         "depends_on": [],
         "created_at": "2026-03-14T15:31:12.717Z",
-        "updated_at": "2026-03-14T16:01:57.002Z",
+        "updated_at": "2026-03-15T10:53:45.457Z",
         "actions": [
           {
             "id": "aidd-plan",
@@ -89,10 +94,34 @@
             "config": {
               "prompt": "Run template aidd-plan with objective: Verrouiller le contrat Recipe et la policy de gestion des donnees incompletes pour la dictee vocale."
             },
-            "status": "pending",
-            "result": null
+            "status": "done",
+            "execution": "client",
+            "result": "Client-side action. Plan completed on 2026-03-15. Previous failed status came from invoking the server-side node executor on a repo-template action without honoring execution=client."
+          },
+          {
+            "id": "aidd-implement",
+            "type": "repo-template",
+            "label": "AIDD Build Implement (/implement)",
+            "execution": "client",
+            "config": {
+              "prompt": "Run /implement for this plan: Implement the policy-recipe-contract node by keeping POST /api/recipes strict for manual creation, adding recipe status draft|published at persistence level, making the schema draft-capable for dictated recipes, introducing a dedicated dictated-recipe DTO/command/controller path, exposing status to the web model, and adding focused unit/integration tests for published vs draft dictated recipes."
+            },
+            "status": "done",
+            "result": "Client-side implementation completed on 2026-03-15. Added draft|published recipe persistence status, relaxed base schema for draft-capable persistence, kept manual POST /api/recipes strict, added dedicated POST /api/recipes/dictation with CreateDictatedRecipeDto and CQRS handler, exposed status and nullable servings in the web recipe model, updated recipe form mapper fallback, and added focused unit/integration tests for manual strictness and dictated draft vs published classification. Validation passed on targeted API unit tests, API integration tests, and web recipe-form mapper spec."
+          },
+          {
+            "id": "aidd-learn",
+            "type": "repo-template",
+            "label": "AIDD Learn (/learn)",
+            "execution": "client",
+            "config": {
+              "prompt": "Run /learn from this outcome: policy-recipe-contract implemented with separated manual and dictation recipe contracts, draft|published persistence, and tests documenting the contract boundaries."
+            },
+            "status": "done",
+            "result": "Client-side /learn completed. Persisted lessons to /memories/repo/policy-recipe-contract.md covering strict manual contract, draft|published persistence, dedicated dictation path, completeness policy, schema/DTO boundary, web model updates, and regression test guards."
           }
-        ]
+        ],
+        "notes": "Started 2026-03-15.\n\nConcrete backend contract plan:\n1. Do not weaken the existing manual create/update contract used by the recipe form. Keep POST /api/recipes and CreateRecipeDto as the strict path for fully valid recipes.\n2. Add explicit recipe status at persistence level: draft | published. Existing recipes default to published.\n3. Make persistence capable of storing incomplete dictated recipes by relaxing schema-level required constraints that are currently incompatible with drafts: title, ingredients, instructions, servings.\n4. Move completeness enforcement out of the base schema and into application policy. Manual create/update remains strict through current DTO validation. Dictation gets its own dedicated DTO and command path.\n5. Introduce a dedicated create-from-dictation contract instead of overloading CreateRecipeDto. Proposed API shape: POST /api/recipes/dictation or equivalent dedicated command path.\n6. Dictation policy for MVP: if minimum recipe completeness is reached, persist as published; otherwise persist as draft. Reject only structurally unusable payloads, not merely incomplete content.\n7. Proposed minimum completeness rule for published dictated recipes: non-empty title, at least 1 ingredient, at least 1 instruction, servings >= 1. Everything else remains optional.\n8. Proposed persistence defaults for draft compatibility: description='' ; tags=[] ; imageUrl='' ; prepTime=null ; cookTime=null ; servings=null when unknown.\n9. Follow-up code changes required: recipe.schema.ts, recipe types exposed to web, dedicated dictation DTO/command/handler/controller route, query serialization of status, tests for draft vs published flows.\n10. Validation plan: unit tests for policy classification, handler tests for default normalization, integration tests for dictation create draft and dictation create published.\n\nCurrent repo mismatch motivating this plan:\n- Recipe schema has no status field and still requires servings.\n- CreateRecipeDto still models only fully valid manual creation.\n- Web Recipe model also has no status field yet.\n\nRecommended implementation order:\nA. Add status and draft-capable persistence model.\nB. Add dedicated dictation DTO + command path.\nC. Add policy classifier and tests.\nD. Wire parser/mobile tasks against the dedicated dictation path, not the manual create path.\n\nExecution clarification:\n- aidd-plan is client-side and already completed.\n- aidd-implement is client-side and should be run next.\n- aidd-learn is client-side and should run only after implement completes.\n- The server-side execute_node_actions path is not valid for repo-template actions unless execution metadata is honored by the caller."
       },
       "mobile-voice-capture": {
         "id": "mobile-voice-capture",
@@ -109,6 +138,7 @@
             "config": {
               "prompt": "Run template aidd-implement with plan: Implement mobile voice capture with French locale and graceful fallback."
             },
+            "execution": "client",
             "status": "pending",
             "result": null
           },
@@ -119,6 +149,7 @@
             "config": {
               "prompt": "Run template aidd-assert with changes: Mobile voice capture behavior and fallback availability checks."
             },
+            "execution": "client",
             "status": "pending",
             "result": null
           },
@@ -129,6 +160,7 @@
             "config": {
               "prompt": "Run template aidd-commit with intent: Commit mobile voice capture implementation."
             },
+            "execution": "client",
             "status": "pending",
             "result": null
           }
@@ -151,6 +183,7 @@
             "config": {
               "prompt": "Run template aidd-implement with plan: Build full manual fallback journey when Web Speech API is unavailable."
             },
+            "execution": "client",
             "status": "pending",
             "result": null
           },
@@ -161,6 +194,7 @@
             "config": {
               "prompt": "Run template aidd-assert with changes: Validate manual fallback accessibility and correctness."
             },
+            "execution": "client",
             "status": "pending",
             "result": null
           },
@@ -171,6 +205,7 @@
             "config": {
               "prompt": "Run template aidd-commit with intent: Commit no-speech fallback journey implementation."
             },
+            "execution": "client",
             "status": "pending",
             "result": null
           }
@@ -193,6 +228,7 @@
             "config": {
               "prompt": "Run template aidd-implement with plan: Implement transcript parser for title, ingredients and steps extraction."
             },
+            "execution": "client",
             "status": "pending",
             "result": null
           },
@@ -203,6 +239,7 @@
             "config": {
               "prompt": "Run template aidd-assert with changes: Verify parser robustness on noisy transcript inputs."
             },
+            "execution": "client",
             "status": "pending",
             "result": null
           },
@@ -213,6 +250,7 @@
             "config": {
               "prompt": "Run template aidd-commit with intent: Commit smart transcript parser implementation."
             },
+            "execution": "client",
             "status": "pending",
             "result": null
           }
@@ -236,6 +274,7 @@
             "config": {
               "prompt": "Run template aidd-implement with plan: Implement dictation API DTO, command and CQRS flow."
             },
+            "execution": "client",
             "status": "pending",
             "result": null
           },
@@ -246,6 +285,7 @@
             "config": {
               "prompt": "Run template aidd-assert with changes: Validate API contract, DTO validation and CQRS behavior."
             },
+            "execution": "client",
             "status": "pending",
             "result": null
           },
@@ -256,6 +296,7 @@
             "config": {
               "prompt": "Run template aidd-commit with intent: Commit dictation API flow implementation."
             },
+            "execution": "client",
             "status": "pending",
             "result": null
           }
@@ -278,6 +319,7 @@
             "config": {
               "prompt": "Run template aidd-implement with plan: Persist recipe with JWT author binding and Mongo compliance."
             },
+            "execution": "client",
             "status": "pending",
             "result": null
           },
@@ -288,6 +330,7 @@
             "config": {
               "prompt": "Run template aidd-assert with changes: Validate secure persistence and author ownership constraints."
             },
+            "execution": "client",
             "status": "pending",
             "result": null
           },
@@ -298,6 +341,7 @@
             "config": {
               "prompt": "Run template aidd-commit with intent: Commit secure persistence implementation."
             },
+            "execution": "client",
             "status": "pending",
             "result": null
           }
@@ -322,6 +366,7 @@
             "config": {
               "prompt": "Run template aidd-assert with changes: Execute and analyze unit, integration and e2e quality gates."
             },
+            "execution": "client",
             "status": "pending",
             "result": null
           },
@@ -332,6 +377,7 @@
             "config": {
               "prompt": "Run template aidd-review-code on changes: Parser, API and mobile dictation implementation."
             },
+            "execution": "client",
             "status": "pending",
             "result": null
           },
@@ -342,6 +388,7 @@
             "config": {
               "prompt": "Run template aidd-review-functional for scope: Voice dictation user journey and acceptance criteria."
             },
+            "execution": "client",
             "status": "pending",
             "result": null
           }

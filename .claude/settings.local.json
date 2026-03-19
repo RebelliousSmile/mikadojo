@@ -4,7 +4,9 @@
       "Bash(ls:*)",
       "Bash(git checkout:*)",
       "Bash(cd:*)",
-      "Bash(timeout:*)"
+      "Bash(timeout:*)",
+      "Bash(find:*)",
+      "Bash(npm:*)"
     ]
   }
 }

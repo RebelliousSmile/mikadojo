@@ -1,23 +1,22 @@
-import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { readGraph, writeGraph, graphExists } from "../data/graph-store.js";
-import { NodeStatus, ActionStatus, Action } from "../schemas.js";
-
-const ActionConfigSchema = z.object({
-  prompt: z.string().optional(),
-  command: z.string().optional(),
-  cwd: z.string().optional(),
-  allowedTools: z.array(z.string()).optional(),
-});
-
-const ActionSchema = z.object({
-  id: z.string(),
-  type: z.enum(["claude-code", "gh-cli", "shell", "repo-template"]),
-  label: z.string(),
-  config: ActionConfigSchema,
-  status: ActionStatus,
-  result: z.string().nullable(),
-});
+import { z } from "zod";
+import { readGraph, writeGraph, writeNodeFile } from "../data/graph-store.js";
+import {
+  getActionableNodes,
+  deleteNode,
+  addNode,
+  updateNode,
+} from "../data/node-operations.js";
+import { updateNodeStatus as sharedUpdateNodeStatus } from "../data/node-status-update.js";
+import { syncAfterWrite } from "../git/sync-after-write.js";
+import { getCurrentUser } from "../gh/gh-client.js";
+import {
+  onNodeCreated,
+  onNodeDeleted,
+  onNodeDone,
+  onAssigneeChanged,
+} from "../gh/issue-sync.js";
+import { NodeStatus } from "../schemas.js";
 
 export function registerNodeTools(server: McpServer): void {
   server.tool(
@@ -51,28 +50,37 @@ export function registerNodeTools(server: McpServer): void {
       status: NodeStatus.optional().describe("Initial status (default: todo)"),
       depends_on: z.array(z.string()).optional().describe("Array of node IDs this node depends on"),
       notes: z.string().optional().describe("Optional notes"),
-      actions: z.array(ActionSchema).optional().describe("Optional actions for the node"),
     },
-    async ({ graphName, nodeId, description, status, depends_on, notes, actions }) => {
+    async ({ graphName, nodeId, description, status, depends_on, notes }) => {
       try {
         const graph = await readGraph(graphName);
-        if (graph.nodes[nodeId]) {
+        if (graph.phase === "development") {
+          return { content: [{ type: "text", text: JSON.stringify({ error: "Cannot add nodes in development phase" }) }] };
+        }
+        try {
+          const updated = addNode(graph, {
+            id: nodeId,
+            description,
+            status,
+            depends_on,
+            notes,
+          });
+          await writeGraph(graphName, updated);
+
+          // Issue sync: create issue if graph is in design phase and has github config
+          if (updated.phase === "design" && updated.github) {
+            const issueNumber = await onNodeCreated(updated, nodeId, graphName);
+            if (issueNumber != null) {
+              const nodeWithIssue = { ...updated.nodes[nodeId], issue_number: issueNumber };
+              await writeNodeFile(graphName, nodeId, nodeWithIssue);
+            }
+          }
+
+          await syncAfterWrite([`mikado/${graphName}/${nodeId}.yaml`, `mikado/${graphName}/_meta.yaml`], `mikado: add node ${nodeId} to ${graphName}`);
+          return { content: [{ type: "text", text: JSON.stringify({ success: true, nodeId }) }] };
+        } catch (validationErr) {
           return { content: [{ type: "text", text: JSON.stringify({ error: `Node "${nodeId}" already exists in graph "${graphName}"` }) }] };
         }
-        const now = new Date().toISOString();
-        graph.nodes[nodeId] = {
-          id: nodeId,
-          description,
-          status: status ?? "todo",
-          depends_on: depends_on ?? [],
-          notes: notes,
-          actions: actions,
-          created_at: now,
-          updated_at: now,
-        };
-        graph.updated_at = now;
-        await writeGraph(graphName, graph);
-        return { content: [{ type: "text", text: JSON.stringify({ success: true, nodeId }) }] };
       } catch (err) {
         return { content: [{ type: "text", text: JSON.stringify({ error: String(err) }) }] };
       }
@@ -85,27 +93,50 @@ export function registerNodeTools(server: McpServer): void {
     {
       graphName: z.string().describe("Name of the graph"),
       nodeId: z.string().describe("ID of the node to update"),
+      status: NodeStatus.optional().describe("New status"),
       description: z.string().optional().describe("New description"),
       notes: z.string().optional().describe("New notes"),
       depends_on: z.array(z.string()).optional().describe("New dependency list"),
-      actions: z.array(ActionSchema).optional().describe("New actions list"),
+      assignee: z.string().nullable().optional().describe("Assignee GitHub username"),
     },
-    async ({ graphName, nodeId, description, notes, depends_on, actions }) => {
+    async ({ graphName, nodeId, status, description, notes, depends_on, assignee }) => {
       try {
         const graph = await readGraph(graphName);
-        const node = graph.nodes[nodeId];
-        if (!node) {
+        try {
+          const oldNode = graph.nodes[nodeId];
+          if (!oldNode) {
+            return { content: [{ type: "text", text: JSON.stringify({ error: `Node "${nodeId}" not found in graph "${graphName}"` }) }] };
+          }
+
+          const updated = updateNode(graph, nodeId, {
+            status,
+            description,
+            notes,
+            depends_on,
+            assignee,
+          });
+
+          await writeNodeFile(graphName, nodeId, updated.nodes[nodeId]);
+
+          // Issue sync: status done
+          if (status === "done") {
+            await onNodeDone(updated, oldNode.issue_number ?? null);
+          }
+
+          // Issue sync: assignee changed
+          if (assignee !== undefined) {
+            const oldAssignee = oldNode.assignee ?? null;
+            const newAssignee = assignee;
+            if (oldAssignee !== newAssignee) {
+              await onAssigneeChanged(updated, oldNode.issue_number ?? null, oldAssignee, newAssignee);
+            }
+          }
+
+          await syncAfterWrite([`mikado/${graphName}/${nodeId}.yaml`], `mikado: update node ${nodeId} in ${graphName}`);
+          return { content: [{ type: "text", text: JSON.stringify({ success: true, nodeId }) }] };
+        } catch (validationErr) {
           return { content: [{ type: "text", text: JSON.stringify({ error: `Node "${nodeId}" not found in graph "${graphName}"` }) }] };
         }
-        const now = new Date().toISOString();
-        if (description !== undefined) node.description = description;
-        if (notes !== undefined) node.notes = notes;
-        if (depends_on !== undefined) node.depends_on = depends_on;
-        if (actions !== undefined) node.actions = actions;
-        node.updated_at = now;
-        graph.updated_at = now;
-        await writeGraph(graphName, graph);
-        return { content: [{ type: "text", text: JSON.stringify({ success: true, nodeId }) }] };
       } catch (err) {
         return { content: [{ type: "text", text: JSON.stringify({ error: String(err) }) }] };
       }
@@ -122,16 +153,24 @@ export function registerNodeTools(server: McpServer): void {
     async ({ graphName, nodeId }) => {
       try {
         const graph = await readGraph(graphName);
-        if (!graph.nodes[nodeId]) {
+        if (graph.phase === "development") {
+          return { content: [{ type: "text", text: JSON.stringify({ error: "Cannot delete nodes in development phase" }) }] };
+        }
+        try {
+          const nodeToDelete = graph.nodes[nodeId];
+          const issueNumber = nodeToDelete?.issue_number ?? null;
+
+          const updated = deleteNode(graph, nodeId);
+          await writeGraph(graphName, updated);
+
+          // Issue sync: close issue on delete
+          await onNodeDeleted(updated, issueNumber);
+
+          await syncAfterWrite([`mikado/${graphName}`], `mikado: delete node ${nodeId} from ${graphName}`);
+          return { content: [{ type: "text", text: JSON.stringify({ success: true, nodeId }) }] };
+        } catch (validationErr) {
           return { content: [{ type: "text", text: JSON.stringify({ error: `Node "${nodeId}" not found in graph "${graphName}"` }) }] };
         }
-        delete graph.nodes[nodeId];
-        for (const node of Object.values(graph.nodes)) {
-          node.depends_on = node.depends_on.filter((dep) => dep !== nodeId);
-        }
-        graph.updated_at = new Date().toISOString();
-        await writeGraph(graphName, graph);
-        return { content: [{ type: "text", text: JSON.stringify({ success: true, nodeId }) }] };
       } catch (err) {
         return { content: [{ type: "text", text: JSON.stringify({ error: String(err) }) }] };
       }
@@ -148,16 +187,7 @@ export function registerNodeTools(server: McpServer): void {
     },
     async ({ graphName, nodeId, status }) => {
       try {
-        const graph = await readGraph(graphName);
-        const node = graph.nodes[nodeId];
-        if (!node) {
-          return { content: [{ type: "text", text: JSON.stringify({ error: `Node "${nodeId}" not found in graph "${graphName}"` }) }] };
-        }
-        const now = new Date().toISOString();
-        node.status = status;
-        node.updated_at = now;
-        graph.updated_at = now;
-        await writeGraph(graphName, graph);
+        await sharedUpdateNodeStatus(graphName, nodeId, status);
         return { content: [{ type: "text", text: JSON.stringify({ success: true, nodeId, status }) }] };
       } catch (err) {
         return { content: [{ type: "text", text: JSON.stringify({ error: String(err) }) }] };
@@ -174,16 +204,24 @@ export function registerNodeTools(server: McpServer): void {
     async ({ graphName }) => {
       try {
         const graph = await readGraph(graphName);
-        const actionable = Object.values(graph.nodes).filter((node) => {
-          if (node.status === "done") return false;
-          return node.depends_on.every((depId) => {
-            const dep = graph.nodes[depId];
-            return dep && dep.status === "done";
-          });
-        });
+        const actionable = getActionableNodes(graph);
         return { content: [{ type: "text", text: JSON.stringify(actionable) }] };
       } catch (err) {
         return { content: [{ type: "text", text: JSON.stringify({ error: String(err) }) }] };
+      }
+    }
+  );
+
+  server.tool(
+    "get_current_user",
+    "Get the GitHub username of the current user (via gh CLI)",
+    {},
+    async () => {
+      try {
+        const username = await getCurrentUser();
+        return { content: [{ type: "text", text: JSON.stringify({ username }) }] };
+      } catch {
+        return { content: [{ type: "text", text: JSON.stringify({ error: "gh CLI not available" }) }] };
       }
     }
   );

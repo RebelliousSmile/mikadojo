@@ -1,0 +1,7 @@
+description: "Deliver feature X to production"
+status: "todo"
+depends_on:
+  - "write-tests"
+  - "setup-ci"
+created_at: "2026-01-01T00:00:00Z"
+updated_at: "2026-01-01T00:00:00Z"

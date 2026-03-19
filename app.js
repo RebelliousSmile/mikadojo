@@ -14,11 +14,11 @@ const updatedEl = document.getElementById("updated");
 const statsEl = document.getElementById("stats");
 
 const statusOrder = ["todo", "doing", "in-progress", "blocked", "done"];
-const actionStatusIcons = { pending: "\u25CB", running: "\u25D4", done: "\u2713", failed: "\u2717" };
 let loadedGraphs = [];
 let activeIndex = -1;
 let currentView = "kanban";
 let lastKnownChange = 0;
+let currentUsername = null;
 const autoLoadUrl = "api/graphs";
 
 const sampleData = {
@@ -179,7 +179,8 @@ function updateSummary(graph, stats) {
   goalEl.textContent = graph.goal || "-";
   rootEl.textContent = graph.root || "-";
   updatedEl.textContent = formatDate(graph.updated_at || graph.created_at);
-  statsEl.textContent = `${stats.totals} nodes, ${stats.done} done, ${stats.blocked} blocked, ${stats.ready} ready`;
+  const phaseLabel = graph.phase === "development" ? "DEV" : "DESIGN";
+  statsEl.textContent = `${phaseLabel} | ${stats.totals} nodes, ${stats.done} done, ${stats.blocked} blocked, ${stats.ready} ready`;
 }
 
 function resetSummary() {
@@ -340,10 +341,46 @@ function renderBoard(graph, entry) {
 
       card.append(cardTitle, cardDesc, tagList, meta, actions);
 
-      // Action panel
-      if (node.actions && node.actions.length > 0) {
-        const actionPanel = buildActionPanel(node, entry);
-        card.appendChild(actionPanel);
+      // Assignee display
+      if (node.assignee) {
+        const assigneeDiv = document.createElement("div");
+        assigneeDiv.className = "card-assignee";
+        if (node.assignee && node.assignee === currentUsername) {
+          assigneeDiv.classList.add("card-assignee-me");
+          assigneeDiv.textContent = `@${node.assignee} (me)`;
+        } else {
+          assigneeDiv.textContent = `@${node.assignee}`;
+        }
+        card.appendChild(assigneeDiv);
+      }
+
+      // Assign/Unassign buttons (only for server-loaded graphs in development phase)
+      if (entry && entry.source === "server" && graph.phase === "development") {
+        const isActionable = !isNodeBlocked(node, nodeMap) && node.status !== "done";
+        if (isActionable) {
+          if (!node.assignee) {
+            const takeBtn = document.createElement("button");
+            takeBtn.type = "button";
+            takeBtn.className = "assign-button assign-take";
+            takeBtn.textContent = "Take";
+            takeBtn.addEventListener("click", () => assignNode(entry, node.id));
+            card.appendChild(takeBtn);
+          } else if (node.assignee && node.assignee === currentUsername) {
+            const releaseBtn = document.createElement("button");
+            releaseBtn.type = "button";
+            releaseBtn.className = "assign-button assign-release";
+            releaseBtn.textContent = "Release";
+            releaseBtn.addEventListener("click", () => unassignNode(entry, node.id));
+            card.appendChild(releaseBtn);
+          }
+        }
+      }
+
+      // Card styling based on assignee
+      if (node.assignee && node.assignee === currentUsername) {
+        card.classList.add("card-mine");
+      } else if (node.assignee) {
+        card.classList.add("card-assigned");
       }
 
       column.appendChild(card);
@@ -351,6 +388,44 @@ function renderBoard(graph, entry) {
 
     board.appendChild(column);
   });
+}
+
+async function assignNode(entry, nodeId) {
+  try {
+    const response = await fetch(
+      `/api/graphs/${encodeURIComponent(entry.name)}/nodes/${encodeURIComponent(nodeId)}/assign`,
+      { method: "POST", headers: { "Content-Type": "application/json" } }
+    );
+    if (!response.ok) {
+      const err = await response.json();
+      showError(`Failed to assign: ${err.error || response.status}`);
+      return;
+    }
+    const payload = await response.json();
+    if (payload.graph) entry.graph = payload.graph;
+    renderCurrentView(entry.graph);
+  } catch (error) {
+    showError(`Failed to assign: ${error.message}`);
+  }
+}
+
+async function unassignNode(entry, nodeId) {
+  try {
+    const response = await fetch(
+      `/api/graphs/${encodeURIComponent(entry.name)}/nodes/${encodeURIComponent(nodeId)}/unassign`,
+      { method: "POST", headers: { "Content-Type": "application/json" } }
+    );
+    if (!response.ok) {
+      const err = await response.json();
+      showError(`Failed to unassign: ${err.error || response.status}`);
+      return;
+    }
+    const payload = await response.json();
+    if (payload.graph) entry.graph = payload.graph;
+    renderCurrentView(entry.graph);
+  } catch (error) {
+    showError(`Failed to unassign: ${error.message}`);
+  }
 }
 
 async function tryAutoLoad() {
@@ -713,151 +788,6 @@ function setView(view) {
 viewKanbanBtn.addEventListener("click", () => setView("kanban"));
 viewGraphBtn.addEventListener("click", () => setView("graph"));
 
-function buildActionPanel(node, entry) {
-  const panel = document.createElement("div");
-  panel.className = "action-panel";
-
-  const header = document.createElement("div");
-  header.className = "action-panel-header";
-
-  const title = document.createElement("span");
-  title.className = "action-panel-title";
-  title.textContent = `Actions (${node.actions.length})`;
-  header.appendChild(title);
-
-  if (entry && entry.source === "server") {
-    const runBtn = document.createElement("button");
-    runBtn.type = "button";
-    runBtn.className = "action-run-btn";
-    runBtn.textContent = "Run All";
-    const hasRunning = node.actions.some((a) => a.status === "running");
-    if (hasRunning) {
-      runBtn.disabled = true;
-      runBtn.textContent = "Running...";
-    }
-    runBtn.addEventListener("click", async () => {
-      runBtn.disabled = true;
-      runBtn.textContent = "Running...";
-      try {
-        const resp = await fetch(
-          `/api/graphs/${encodeURIComponent(entry.name)}/nodes/${encodeURIComponent(node.id)}/run-actions`,
-          { method: "POST", headers: { "Content-Type": "application/json" } }
-        );
-        const result = await resp.json();
-        if (result.error) {
-          showError(`Actions failed: ${result.error}`);
-        }
-        // Reload graph to show updated statuses
-        await reloadActiveGraph();
-      } catch (err) {
-        showError(`Actions failed: ${err.message}`);
-        runBtn.disabled = false;
-        runBtn.textContent = "Run All";
-      }
-    });
-    header.appendChild(runBtn);
-  }
-
-  panel.appendChild(header);
-
-  const list = document.createElement("div");
-  list.className = "action-list";
-
-  node.actions.forEach((action) => {
-    const item = document.createElement("div");
-    item.className = `action-item action-${action.status || "pending"}`;
-
-    const icon = document.createElement("span");
-    icon.className = "action-icon";
-    icon.textContent = actionStatusIcons[action.status] || actionStatusIcons.pending;
-
-    const label = document.createElement("span");
-    label.className = "action-label";
-    label.textContent = action.label || action.id;
-
-    const type = document.createElement("span");
-    type.className = "action-type";
-    type.textContent = action.type;
-
-    item.append(icon, label, type);
-
-    const configValue = getActionConfigValue(action);
-    if (configValue !== null) {
-      const configBtn = document.createElement("button");
-      configBtn.type = "button";
-      configBtn.className = "action-config-toggle";
-      configBtn.textContent = "config";
-      configBtn.addEventListener("click", () => {
-        const existing = item.querySelector(".action-config");
-        if (existing) {
-          existing.remove();
-          return;
-        }
-
-        const configPre = document.createElement("pre");
-        configPre.className = "action-config";
-        configPre.textContent = formatActionConfig(configValue);
-        item.appendChild(configPre);
-      });
-      item.appendChild(configBtn);
-    }
-
-    if (action.result) {
-      const resultBtn = document.createElement("button");
-      resultBtn.type = "button";
-      resultBtn.className = "action-result-toggle";
-      resultBtn.textContent = "result";
-      resultBtn.addEventListener("click", () => {
-        const existing = item.querySelector(".action-result");
-        if (existing) {
-          existing.remove();
-          return;
-        }
-        const resultDiv = document.createElement("pre");
-        resultDiv.className = "action-result";
-        resultDiv.textContent = action.result.length > 500 ? action.result.slice(0, 500) + "..." : action.result;
-        item.appendChild(resultDiv);
-      });
-      item.appendChild(resultBtn);
-    }
-
-    list.appendChild(item);
-  });
-
-  panel.appendChild(list);
-  return panel;
-}
-
-function getActionConfigValue(action) {
-  if (!action || typeof action !== "object") return null;
-  if (action.config !== undefined) return action.config;
-  if (action.params !== undefined) return action.params;
-  if (action.input !== undefined) return action.input;
-
-  const runtimeKeys = new Set(["id", "label", "type", "status", "result"]);
-  const extra = {};
-
-  Object.entries(action).forEach(([key, value]) => {
-    if (!runtimeKeys.has(key)) {
-      extra[key] = value;
-    }
-  });
-
-  return Object.keys(extra).length > 0 ? extra : null;
-}
-
-function formatActionConfig(value) {
-  if (typeof value === "string") {
-    return value;
-  }
-
-  try {
-    return JSON.stringify(value, null, 2);
-  } catch {
-    return String(value);
-  }
-}
-
 async function reloadActiveGraph() {
   try {
     const response = await fetch(autoLoadUrl, { cache: "no-store" });
@@ -894,6 +824,10 @@ function startAutoRefresh() {
 }
 
 window.addEventListener("DOMContentLoaded", () => {
+  fetch("/api/me").then((r) => r.json()).then((data) => {
+    currentUsername = data.username || null;
+  }).catch(() => {});
+
   tryAutoLoad().then(() => {
     lastKnownChange = Date.now();
     startAutoRefresh();

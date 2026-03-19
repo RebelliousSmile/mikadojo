@@ -176,7 +176,7 @@ Node `id` is derived from the filename (no `id` field in the YAML).
 | Environment Variable | Default | Description |
 |---------------------|---------|-------------|
 | `PORT` | `3100` | Server port |
-| `MIKADO_DIR` | `../mikado` | Path to the mikado graphs directory |
+| `MIKADO_DIR` | `<project-root>/mikado` | Path to the mikado graphs directory |
 | `GIT_PULL_INTERVAL` | `30000` | Git pull interval in milliseconds |
 
 ## Running Tests

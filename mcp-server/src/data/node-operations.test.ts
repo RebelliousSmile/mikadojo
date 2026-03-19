@@ -5,6 +5,7 @@ import {
   deleteNode,
   addNode,
   updateNode,
+  validateDependsOn,
 } from "./node-operations.js";
 
 function makeNode(overrides: Partial<Node> & { id: string }): Node {
@@ -226,23 +227,59 @@ describe("addNode", () => {
     expect(graph.nodes["new"]).toBeUndefined();
   });
 
-  it("should allow adding a node with depends_on referencing non-existent nodes", () => {
-    // WARNING: no validation on depends_on references.
-    // This creates a dangling dependency — getActionableNodes will treat
-    // the node as blocked (non-existent dep is not "done").
+  it("should throw when depends_on references a non-existent node", () => {
     const graph = makeGraph({
       root: makeNode({ id: "root" }),
     });
-    const result = addNode(graph, {
-      id: "orphan",
-      description: "has ghost dep",
-      depends_on: ["does-not-exist"],
+    expect(() =>
+      addNode(graph, {
+        id: "orphan",
+        description: "has ghost dep",
+        depends_on: ["does-not-exist"],
+      }),
+    ).toThrow('Dependency "does-not-exist" does not exist in graph');
+  });
+
+  it("should throw when depends_on creates a direct self-cycle", () => {
+    const graph = makeGraph({
+      root: makeNode({ id: "root" }),
     });
-    expect(result.nodes["orphan"].depends_on).toEqual(["does-not-exist"]);
-    // Confirm the orphan node is blocked because of the dangling reference
-    const actionable = getActionableNodes(result);
-    const actionableIds = actionable.map((n) => n.id);
-    expect(actionableIds).not.toContain("orphan");
+    expect(() =>
+      addNode(graph, {
+        id: "a",
+        description: "self-referencing",
+        depends_on: ["a"],
+      }),
+    ).toThrow('Adding depends_on would create a cycle involving node "a"');
+  });
+
+  it("should throw when depends_on creates a transitive cycle (A → B → C → A)", () => {
+    const graph = makeGraph({
+      root: makeNode({ id: "root" }),
+      b: makeNode({ id: "b", depends_on: ["c"] }),
+      c: makeNode({ id: "c", depends_on: ["a"] }),
+    });
+    // Adding "a" with depends_on: ["b"] would create a → b → c → a cycle
+    expect(() =>
+      addNode(graph, {
+        id: "a",
+        description: "creates cycle",
+        depends_on: ["b"],
+      }),
+    ).toThrow('Adding depends_on would create a cycle involving node "a"');
+  });
+
+  it("should succeed when depends_on is valid with no cycle", () => {
+    const graph = makeGraph({
+      root: makeNode({ id: "root" }),
+      b: makeNode({ id: "b" }),
+    });
+    const result = addNode(graph, {
+      id: "a",
+      description: "depends on b",
+      depends_on: ["b"],
+    });
+    expect(result.nodes["a"].depends_on).toEqual(["b"]);
   });
 
   it("should allow adding a node with empty string id", () => {
@@ -343,15 +380,96 @@ describe("updateNode", () => {
     expect(result.nodes.a.description).toBe("Node a");
   });
 
-  it("should allow updating depends_on to reference non-existent nodes", () => {
-    // WARNING: no validation on depends_on references.
-    // This silently creates dangling dependencies.
+  it("should throw when depends_on references a non-existent node", () => {
     const graph = makeGraph({
       a: makeNode({ id: "a" }),
     });
-    const result = updateNode(graph, "a", { depends_on: ["ghost-1", "ghost-2"] });
-    expect(result.nodes.a.depends_on).toEqual(["ghost-1", "ghost-2"]);
-    // The node becomes blocked because ghost deps are not "done"
-    expect(getActionableNodes(result)).toEqual([]);
+    expect(() =>
+      updateNode(graph, "a", { depends_on: ["ghost-1", "ghost-2"] }),
+    ).toThrow('Dependency "ghost-1" does not exist in graph');
+  });
+
+  it("should throw when new depends_on creates a cycle", () => {
+    const graph = makeGraph({
+      a: makeNode({ id: "a" }),
+      b: makeNode({ id: "b", depends_on: ["a"] }),
+    });
+    // Making a depend on b would create a → b → a
+    expect(() => updateNode(graph, "a", { depends_on: ["b"] })).toThrow(
+      'Adding depends_on would create a cycle involving node "a"',
+    );
+  });
+
+  it("should throw when marking root node done with unfinished dependencies", () => {
+    const graph = makeGraph({
+      root: makeNode({ id: "root", depends_on: ["child"] }),
+      child: makeNode({ id: "child", status: "todo" }),
+    });
+    expect(() => updateNode(graph, "root", { status: "done" })).toThrow(
+      'Cannot mark root node "root" as done: dependencies [child] are not done',
+    );
+  });
+
+  it("should allow marking root node done when all dependencies are done", () => {
+    const graph = makeGraph({
+      root: makeNode({ id: "root", depends_on: ["child"] }),
+      child: makeNode({ id: "child", status: "done" }),
+    });
+    const result = updateNode(graph, "root", { status: "done" });
+    expect(result.nodes.root.status).toBe("done");
+  });
+
+  it("should allow marking root node done when it has no dependencies", () => {
+    const graph = makeGraph({
+      root: makeNode({ id: "root" }),
+    });
+    const result = updateNode(graph, "root", { status: "done" });
+    expect(result.nodes.root.status).toBe("done");
+  });
+
+  it("should allow marking a non-root node done even when its dependencies are not done", () => {
+    const graph = makeGraph({
+      root: makeNode({ id: "root" }),
+      a: makeNode({ id: "a", depends_on: ["b"] }),
+      b: makeNode({ id: "b", status: "todo" }),
+    });
+    const result = updateNode(graph, "a", { status: "done" });
+    expect(result.nodes.a.status).toBe("done");
+  });
+});
+
+describe("validateDependsOn", () => {
+  it("should not throw when all deps exist and no cycle", () => {
+    const nodes: Record<string, Node> = {
+      a: makeNode({ id: "a" }),
+      b: makeNode({ id: "b" }),
+    };
+    expect(() => validateDependsOn(nodes, "a", ["b"])).not.toThrow();
+  });
+
+  it("should throw when a dependency does not exist", () => {
+    const nodes: Record<string, Node> = {
+      a: makeNode({ id: "a" }),
+    };
+    expect(() => validateDependsOn(nodes, "a", ["ghost"])).toThrow(
+      'Dependency "ghost" does not exist in graph',
+    );
+  });
+
+  it("should throw when depends_on creates a cycle", () => {
+    const nodes: Record<string, Node> = {
+      a: makeNode({ id: "a" }),
+      b: makeNode({ id: "b", depends_on: ["a"] }),
+    };
+    expect(() => validateDependsOn(nodes, "a", ["b"])).toThrow(
+      'Adding depends_on would create a cycle involving node "a"',
+    );
+  });
+
+  it("should not throw for empty depends_on", () => {
+    const nodes: Record<string, Node> = {
+      a: makeNode({ id: "a" }),
+    };
+    expect(() => validateDependsOn(nodes, "a", [])).not.toThrow();
   });
 });

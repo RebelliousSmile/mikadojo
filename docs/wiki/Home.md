@@ -39,3 +39,7 @@ The result is a tool where a team and their AI agents share a single source of t
 ## Repository
 
 [https://github.com/RebelliousSmile/mikadojo](https://github.com/RebelliousSmile/mikadojo)
+
+---
+
+🇫🇷 [Version française](fr/Home)

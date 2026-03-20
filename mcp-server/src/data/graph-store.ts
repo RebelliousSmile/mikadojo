@@ -83,6 +83,7 @@ async function readGraphYaml(name: string): Promise<Graph> {
     nodes[nodeId] = {
       id: nodeId,
       ...nodeData,
+      depends_on: Array.isArray(nodeData.depends_on) ? (nodeData.depends_on as string[]) : [],
     } as Node;
   }
 
@@ -147,7 +148,7 @@ export async function writeGraph(name: string, graph: Graph): Promise<void> {
   for (const [nodeId, node] of Object.entries(graph.nodes)) {
     const filePath = nodeFilePath(name, nodeId);
     const { id: _, ...nodeWithoutId } = node;
-    await fs.writeFile(filePath, yaml.dump(nodeWithoutId, { lineWidth: -1 }), "utf-8");
+    await fs.writeFile(filePath, yaml.dump({ depends_on: [], ...nodeWithoutId }, { lineWidth: -1 }), "utf-8");
     currentNodeFiles.add(`${nodeId}.yaml`);
   }
 
@@ -191,7 +192,7 @@ export async function writeNodeFile(
   validateGraphName(graphName);
   const filePath = nodeFilePath(graphName, nodeId);
   const { id: _, ...nodeWithoutId } = nodeData;
-  await fs.writeFile(filePath, yaml.dump(nodeWithoutId, { lineWidth: -1 }), "utf-8");
+  await fs.writeFile(filePath, yaml.dump({ depends_on: [], ...nodeWithoutId }, { lineWidth: -1 }), "utf-8");
 }
 
 export async function deleteNodeFile(

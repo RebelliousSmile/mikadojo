@@ -282,6 +282,21 @@ describe("addNode", () => {
     expect(result.nodes["a"].depends_on).toEqual(["b"]);
   });
 
+  it("should allow adding a node with status done and dependencies", () => {
+    const graph = makeGraph({
+      root: makeNode({ id: "root" }),
+      b: makeNode({ id: "b", status: "todo" }),
+    });
+    const result = addNode(graph, {
+      id: "a",
+      description: "done with deps",
+      status: "done",
+      depends_on: ["b"],
+    });
+    expect(result.nodes["a"].status).toBe("done");
+    expect(result.nodes["a"].depends_on).toEqual(["b"]);
+  });
+
   it("should allow adding a node with empty string id", () => {
     // WARNING: no validation on id format.
     // An empty string id is accepted and stored as a valid key.
@@ -436,6 +451,100 @@ describe("updateNode", () => {
     const result = updateNode(graph, "a", { status: "done" });
     expect(result.nodes.a.status).toBe("done");
   });
+
+  it("should allow simultaneous depends_on + status=done on root when new deps are done", () => {
+    const graph = makeGraph({
+      root: makeNode({ id: "root", depends_on: ["a"] }),
+      a: makeNode({ id: "a", status: "todo" }),
+      b: makeNode({ id: "b", status: "done" }),
+    });
+    // Replace deps with [b] (which is done) and mark root done at the same time
+    const result = updateNode(graph, "root", {
+      depends_on: ["b"],
+      status: "done",
+    });
+    expect(result.nodes.root.status).toBe("done");
+    expect(result.nodes.root.depends_on).toEqual(["b"]);
+  });
+
+  it("should throw simultaneous depends_on + status=done on root when new dep is not done", () => {
+    const graph = makeGraph({
+      root: makeNode({ id: "root", depends_on: ["a"] }),
+      a: makeNode({ id: "a", status: "done" }),
+      c: makeNode({ id: "c", status: "todo" }),
+    });
+    // Replace deps with [c] (not done) and try to mark root done
+    expect(() =>
+      updateNode(graph, "root", { depends_on: ["c"], status: "done" }),
+    ).toThrow(
+      'Cannot mark root node "root" as done: dependencies [c] are not done',
+    );
+  });
+
+  it("should throw when marking root done with ghost dependency", () => {
+    const nodes: Record<string, Node> = {
+      root: makeNode({ id: "root", depends_on: ["ghost"] }),
+    };
+    const graph: Graph = {
+      version: "1.0",
+      goal: "Test goal",
+      phase: "design",
+      created_at: "2026-01-01T00:00:00Z",
+      updated_at: "2026-01-01T00:00:00Z",
+      root: "root",
+      nodes,
+    };
+    expect(() => updateNode(graph, "root", { status: "done" })).toThrow(
+      'Cannot mark root node "root" as done: dependencies [ghost] are not done',
+    );
+  });
+
+  it("should list multiple unfinished deps in root-done error message", () => {
+    const graph = makeGraph({
+      root: makeNode({ id: "root", depends_on: ["a", "b", "c"] }),
+      a: makeNode({ id: "a", status: "done" }),
+      b: makeNode({ id: "b", status: "todo" }),
+      c: makeNode({ id: "c", status: "doing" }),
+    });
+    expect(() => updateNode(graph, "root", { status: "done" })).toThrow(
+      'Cannot mark root node "root" as done: dependencies [b, c] are not done',
+    );
+  });
+
+  it("should update and clear the assignee field", () => {
+    const graph = makeGraph({
+      a: makeNode({ id: "a" }),
+    });
+    const result1 = updateNode(graph, "a", { assignee: "user1" });
+    expect(result1.nodes.a.assignee).toBe("user1");
+
+    const result2 = updateNode(result1, "a", { assignee: null });
+    expect(result2.nodes.a.assignee).toBeNull();
+  });
+
+  it("should allow un-doing a done node even if dependents are done", () => {
+    const graph = makeGraph({
+      root: makeNode({ id: "root" }),
+      a: makeNode({ id: "a", status: "done" }),
+      b: makeNode({ id: "b", status: "done", depends_on: ["a"] }),
+    });
+    const result = updateNode(graph, "a", { status: "todo" });
+    expect(result.nodes.a.status).toBe("todo");
+  });
+});
+
+describe("cross-feature integration", () => {
+  it("should make dependent node actionable after deleting its dependency", () => {
+    const graph = makeGraph({
+      a: makeNode({ id: "a", status: "todo" }),
+      b: makeNode({ id: "b", status: "todo", depends_on: ["a"] }),
+    });
+    const afterDelete = deleteNode(graph, "a");
+    // b's depends_on should have been cleaned up
+    expect(afterDelete.nodes.b.depends_on).toEqual([]);
+    const actionable = getActionableNodes(afterDelete);
+    expect(actionable).toEqual([afterDelete.nodes.b]);
+  });
 });
 
 describe("validateDependsOn", () => {
@@ -471,5 +580,41 @@ describe("validateDependsOn", () => {
       a: makeNode({ id: "a" }),
     };
     expect(() => validateDependsOn(nodes, "a", [])).not.toThrow();
+  });
+
+  it("should throw for a longer transitive chain (4+ nodes)", () => {
+    const nodes: Record<string, Node> = {
+      a: makeNode({ id: "a", depends_on: ["b"] }),
+      b: makeNode({ id: "b", depends_on: ["c"] }),
+      c: makeNode({ id: "c", depends_on: ["d"] }),
+      d: makeNode({ id: "d" }),
+    };
+    // d -> a would create d -> a -> b -> c -> d
+    expect(() => validateDependsOn(nodes, "d", ["a"])).toThrow(
+      'Adding depends_on would create a cycle involving node "d"',
+    );
+  });
+
+  it("should throw when one of multiple deps creates a cycle", () => {
+    const nodes: Record<string, Node> = {
+      a: makeNode({ id: "a" }),
+      b: makeNode({ id: "b", depends_on: ["a"] }),
+      x: makeNode({ id: "x" }),
+    };
+    // a depends on [x, b]: x is fine, but b -> a creates a -> b -> a
+    expect(() => validateDependsOn(nodes, "a", ["x", "b"])).toThrow(
+      'Adding depends_on would create a cycle involving node "a"',
+    );
+  });
+
+  it("should not throw for diamond dependency (no false positive)", () => {
+    const nodes: Record<string, Node> = {
+      a: makeNode({ id: "a" }),
+      b: makeNode({ id: "b", depends_on: ["d"] }),
+      c: makeNode({ id: "c", depends_on: ["d"] }),
+      d: makeNode({ id: "d" }),
+    };
+    // a -> [b, c], both b and c -> d: diamond shape, no cycle
+    expect(() => validateDependsOn(nodes, "a", ["b", "c"])).not.toThrow();
   });
 });

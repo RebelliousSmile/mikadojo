@@ -221,6 +221,45 @@ describe("writeGraph", () => {
     );
   });
 
+  it("should preserve depends_on when writing nodes", async () => {
+    mockedFs.mkdir.mockResolvedValue(undefined);
+    mockedFs.writeFile.mockResolvedValue(undefined);
+    mockedFs.readdir.mockResolvedValue([] as any);
+
+    const graphWithDeps: Graph = {
+      ...sampleGraph,
+      nodes: {
+        root: {
+          id: "root",
+          description: "Root node",
+          status: "todo",
+          depends_on: ["child"],
+        },
+        child: {
+          id: "child",
+          description: "Child node",
+          status: "todo",
+          depends_on: [],
+        },
+      },
+    };
+
+    await writeGraph("test", graphWithDeps);
+
+    const writeCalls = mockedFs.writeFile.mock.calls;
+    const rootCall = writeCalls.find(([p]) => String(p).includes("root.yaml"));
+    const childCall = writeCalls.find(([p]) => String(p).includes("child.yaml"));
+
+    expect(rootCall).toBeDefined();
+    expect(childCall).toBeDefined();
+
+    const rootContent = JSON.parse(rootCall![1] as string);
+    const childContent = JSON.parse(childCall![1] as string);
+
+    expect(rootContent.depends_on).toEqual(["child"]);
+    expect(childContent.depends_on).toEqual([]);
+  });
+
   it("should reject invalid graph names", async () => {
     await expect(writeGraph("bad/name", sampleGraph)).rejects.toThrow(
       "Invalid graph name",

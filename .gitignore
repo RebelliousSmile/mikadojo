@@ -38,8 +38,17 @@ Thumbs.db
 
 # AI-driven development (local only)
 aidd_docs/
-.claude/
 CLAUDE.md
+
+# Claude Code: ignore all except tracked commands
+.claude/*
+!.claude/commands/
+.claude/commands/*
+!.claude/commands/aidd/
+.claude/commands/aidd/*
+!.claude/commands/aidd/02/
+.claude/commands/aidd/02/*
+!.claude/commands/aidd/02/decompose_mikado.md
 
 # Test artifacts
 test-results/

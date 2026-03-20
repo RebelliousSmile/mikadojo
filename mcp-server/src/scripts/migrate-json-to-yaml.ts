@@ -1,13 +1,14 @@
 import fs from "node:fs/promises";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import yaml from "js-yaml";
 import { MIKADO_DIR } from "../config.js";
 
-interface LegacyNode {
+export interface LegacyNode {
   id: string;
   description: string;
   status: string;
-  depends_on: string[];
+  depends_on?: string[];
   notes?: string;
   actions?: unknown[];
   issue_number?: number | null;
@@ -16,7 +17,7 @@ interface LegacyNode {
   updated_at?: string;
 }
 
-interface LegacyGraph {
+export interface LegacyGraph {
   version: string;
   goal: string;
   created_at: string;
@@ -25,8 +26,8 @@ interface LegacyGraph {
   root: string;
 }
 
-async function migrate(): Promise<void> {
-  const entries = await fs.readdir(MIKADO_DIR);
+export async function migrate(dir: string = MIKADO_DIR): Promise<void> {
+  const entries = await fs.readdir(dir);
   const jsonFiles = entries.filter((f) => f.endsWith(".json"));
 
   if (jsonFiles.length === 0) {
@@ -36,8 +37,8 @@ async function migrate(): Promise<void> {
 
   for (const file of jsonFiles) {
     const name = file.replace(/\.json$/, "");
-    const jsonPath = path.join(MIKADO_DIR, file);
-    const dirPath = path.join(MIKADO_DIR, name);
+    const jsonPath = path.join(dir, file);
+    const dirPath = path.join(dir, name);
 
     console.log(`Migrating ${file} -> ${name}/`);
 
@@ -66,9 +67,11 @@ async function migrate(): Promise<void> {
     // Write node files
     for (const [nodeId, node] of Object.entries(graph.nodes)) {
       const { id: _, actions: _a, ...nodeWithoutId } = node;
+      // Ensure depends_on is always present (default to empty array if missing)
+      const nodeData = { ...nodeWithoutId, depends_on: nodeWithoutId.depends_on ?? [] };
       await fs.writeFile(
         path.join(dirPath, `${nodeId}.yaml`),
-        yaml.dump(nodeWithoutId, { lineWidth: -1 }),
+        yaml.dump(nodeData, { lineWidth: -1 }),
         "utf-8",
       );
     }
@@ -82,7 +85,9 @@ async function migrate(): Promise<void> {
   console.log("Migration complete.");
 }
 
-migrate().catch((err) => {
-  console.error("Migration failed:", err);
-  process.exit(1);
-});
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  migrate().catch((err) => {
+    console.error("Migration failed:", err);
+    process.exit(1);
+  });
+}
